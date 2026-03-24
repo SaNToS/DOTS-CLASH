@@ -24,6 +24,8 @@ export default function Lobby() {
   const [bonuses, setBonuses] = useState(null);
   const [showBonusModal, setShowBonusModal] = useState(false);
   const [buyLoading, setBuyLoading] = useState(false);
+  const [buyError, setBuyError] = useState('');
+  const [buySuccess, setBuySuccess] = useState(0); // added amount on success
 
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate();
@@ -150,7 +152,9 @@ export default function Lobby() {
 
   const handleBuyBonus = async (pack) => {
     if (!user) return;
-    setBuyLoading(true);
+    setBuyLoading(pack);
+    setBuyError('');
+    setBuySuccess(0);
     try {
       const res = await fetch('/api/auth/bonuses/purchase', {
         method: 'POST',
@@ -158,8 +162,16 @@ export default function Lobby() {
         body: JSON.stringify({ pack })
       });
       const data = await res.json();
-      if (res.ok) setBonuses(data.bonuses);
-    } catch {}
+      if (res.ok) {
+        setBonuses(data.bonuses);
+        setBuySuccess(data.added);
+        setTimeout(() => setShowBonusModal(false), 1200);
+      } else {
+        setBuyError(data.error || 'Purchase failed');
+      }
+    } catch {
+      setBuyError('Network error — try again');
+    }
     setBuyLoading(false);
   };
 
@@ -457,25 +469,31 @@ export default function Lobby() {
         <div className="absolute inset-0 z-50 bg-slate-900/95 p-6 flex flex-col rounded-[2rem]">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-white flex items-center gap-2"><Gem className="text-purple-400" /> {t('bonus.title')}</h2>
-            <button onClick={() => setShowBonusModal(false)} className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg"><X className="w-4 h-4" /></button>
+            <button onClick={() => { setShowBonusModal(false); setBuyError(''); setBuySuccess(0); }} className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg"><X className="w-4 h-4" /></button>
           </div>
           <p className="text-sm text-slate-400 mb-2">{t('bonus.subtitle')}</p>
           <p className="text-sm text-purple-300 font-semibold mb-6">{t('bonus.earn', { n: 3 })}</p>
           <p className="text-sm text-slate-300 mb-4">{t('bonus.balance', { n: bonuses ?? 0 })}</p>
+          {buyError && (
+            <div className="mb-3 px-4 py-2.5 bg-red-900/40 border border-red-700/40 rounded-xl text-red-300 text-sm">{buyError}</div>
+          )}
+          {buySuccess > 0 && (
+            <div className="mb-3 px-4 py-2.5 bg-emerald-900/40 border border-emerald-700/40 rounded-xl text-emerald-300 text-sm font-semibold">+{buySuccess} bonuses added!</div>
+          )}
           <div className="space-y-3">
-            {[{ pack: 'small', label: t('bonus.small'), amount: 5 }, { pack: 'medium', label: t('bonus.medium'), amount: 20 }, { pack: 'large', label: t('bonus.large'), amount: 50 }].map(({ pack, label, amount }) => (
+            {[{ pack: 'small', label: t('bonus.small'), amount: 5 }, { pack: 'medium', label: t('bonus.medium'), amount: 20 }, { pack: 'large', label: t('bonus.large'), amount: 50 }].map(({ pack, label }) => (
               <button
                 key={pack}
-                disabled={buyLoading}
+                disabled={!!buyLoading || buySuccess > 0}
                 onClick={() => handleBuyBonus(pack)}
                 className="w-full flex justify-between items-center px-5 py-3.5 bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 rounded-xl text-white font-semibold transition-colors disabled:opacity-50"
               >
                 <span>{label}</span>
-                <span className="text-purple-300 text-sm">{t('bonus.buy')}</span>
+                <span className="text-purple-300 text-sm">{buyLoading === pack ? '...' : t('bonus.buy')}</span>
               </button>
             ))}
           </div>
-          <button onClick={() => setShowBonusModal(false)} className="mt-6 text-sm text-slate-500 hover:text-slate-300 transition-colors">{t('bonus.close')}</button>
+          <button onClick={() => { setShowBonusModal(false); setBuyError(''); setBuySuccess(0); }} className="mt-6 text-sm text-slate-500 hover:text-slate-300 transition-colors">{t('bonus.close')}</button>
         </div>
       )}
     </motion.div>

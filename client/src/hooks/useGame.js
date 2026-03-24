@@ -16,6 +16,7 @@ export const useGame = (socket, roomId, myNickname) => {
   const [drawOffered, setDrawOffered] = useState(null);
   const [drawOfferSent, setDrawOfferSent] = useState(false);
   const [drawDeclined, setDrawDeclined] = useState(false);
+  const [drawCooldown, setDrawCooldown] = useState(0); // moves remaining before next offer allowed
 
   // Undo / bonus states
   const [bonuses, setBonuses] = useState(0);
@@ -46,6 +47,7 @@ export const useGame = (socket, roomId, myNickname) => {
       setDrawOffered(null);
       setDrawOfferSent(false);
       setDrawDeclined(false);
+      setDrawCooldown(0);
       setUndoDenied(null);
 
       // Set initial bonus count from player data
@@ -70,6 +72,7 @@ export const useGame = (socket, roomId, myNickname) => {
         });
       }
       turnStartRef.current = Date.now();
+      setDrawCooldown(prev => (prev > 0 ? prev - 1 : 0));
 
       setGameState(prev => {
         if (!prev) return prev;
@@ -172,6 +175,7 @@ export const useGame = (socket, roomId, myNickname) => {
       setDrawOffered(null);
       setDrawOfferSent(false);
       setDrawDeclined(true);
+      setDrawCooldown(3);
       setTimeout(() => setDrawDeclined(false), 3000);
     });
 
@@ -251,7 +255,7 @@ export const useGame = (socket, roomId, myNickname) => {
     room, gameState, error, chat, gameOverResult,
     opponentDisconnected, lastCaptureAt, diceRoll,
     playerTimes, turnStartRef,
-    drawOffered, drawOfferSent, drawDeclined,
+    drawOffered, drawOfferSent, drawDeclined, drawCooldown,
     bonuses, undoDenied,
     makeMove, passTurn, resign, sendMessage,
     offerDraw, acceptDraw, declineDraw,

@@ -23,6 +23,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/dots?schema=public
       - JWT_SECRET=supersecret_dots_key_prod
       - PORT=3001
+      - ADMIN_USERNAMES=alex
     depends_on:
       - db
     restart: unless-stopped

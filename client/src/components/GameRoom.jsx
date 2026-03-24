@@ -188,7 +188,7 @@ export default function GameRoom() {
   const {
     room, gameState, chat, gameOverResult, opponentDisconnected,
     lastCaptureAt, diceRoll, playerTimes, turnStartRef,
-    drawOffered, drawOfferSent, drawDeclined,
+    drawOffered, drawOfferSent, drawDeclined, drawCooldown,
     bonuses, undoDenied,
     makeMove, passTurn, resign, sendMessage,
     offerDraw, acceptDraw, declineDraw,
@@ -341,7 +341,8 @@ export default function GameRoom() {
     if (chatMessage.trim()) { sendMessage(chatMessage); setChatMessage(''); }
   };
 
-  const canOfferDraw = room.status === 'playing' && !drawOfferSent && !drawOffered && myPlayerIndex !== -1;
+  const isBotGame = room.players?.some(p => p.isBot);
+  const canOfferDraw = room.status === 'playing' && !drawOfferSent && !drawOffered && myPlayerIndex !== -1 && drawCooldown === 0;
 
   return (
     <>
@@ -762,13 +763,15 @@ export default function GameRoom() {
               >
                 <Check className="w-4 h-4 shrink-0" /> <span>{t('game.pass')}</span>
               </button>
-              <button
-                onClick={undoMove}
-                disabled={!isMyTurn || room.status !== 'playing'}
-                className="flex-1 max-w-[110px] max-md:max-w-none flex justify-center items-center gap-1.5 max-md:flex-col max-md:gap-1 px-3 max-md:px-1 py-2.5 max-md:py-3 bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 text-purple-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold transition-all shadow-lg active:scale-95 text-sm max-md:text-xs"
-              >
-                <Undo2 className="w-4 h-4 shrink-0" /> <span>{t('game.undo')}</span>
-              </button>
+              {isBotGame && (
+                <button
+                  onClick={undoMove}
+                  disabled={!isMyTurn || room.status !== 'playing'}
+                  className="flex-1 max-w-[110px] max-md:max-w-none flex justify-center items-center gap-1.5 max-md:flex-col max-md:gap-1 px-3 max-md:px-1 py-2.5 max-md:py-3 bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 text-purple-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold transition-all shadow-lg active:scale-95 text-sm max-md:text-xs"
+                >
+                  <Undo2 className="w-4 h-4 shrink-0" /> <span>{t('game.undo')}</span>
+                </button>
+              )}
               <button
                 onClick={offerDraw}
                 disabled={!canOfferDraw}
@@ -778,7 +781,8 @@ export default function GameRoom() {
                     : 'bg-slate-700/50 border border-slate-600 hover:bg-slate-700 text-slate-300'
                 }`}
               >
-                <Handshake className="w-4 h-4 shrink-0" /> <span>{t('game.offer_draw')}</span>
+                <Handshake className="w-4 h-4 shrink-0" />
+                <span>{t('game.offer_draw')}{drawCooldown > 0 ? ` (${drawCooldown})` : ''}</span>
               </button>
               <button
                 onClick={resign}

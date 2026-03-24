@@ -166,6 +166,14 @@ const translations = {
     'admin.no_access': 'Access Denied',
     'admin.loading': 'Loading...',
     'admin.joined': 'Joined',
+    'admin.backup': 'Download Backup',
+    'admin.restore': 'Restore from Backup',
+    'admin.restore_title': 'Restore from Backup',
+    'admin.restore_info': 'Backup from {date} · {count} users',
+    'admin.restore_passwords': 'Also restore password hashes',
+    'admin.restore_confirm': 'Restore',
+    'admin.restore_result': 'Done: {created} created, {updated} updated, {errors} errors',
+    'admin.restore_error': 'Invalid backup file',
   },
   ua: {
     // App nav
@@ -332,6 +340,14 @@ const translations = {
     'admin.no_access': 'Доступ заборонено',
     'admin.loading': 'Завантаження...',
     'admin.joined': 'Зареєстровано',
+    'admin.backup': 'Завантажити резервну копію',
+    'admin.restore': 'Відновити з копії',
+    'admin.restore_title': 'Відновлення з резервної копії',
+    'admin.restore_info': 'Копія від {date} · {count} користувачів',
+    'admin.restore_passwords': 'Відновити також хеші паролів',
+    'admin.restore_confirm': 'Відновити',
+    'admin.restore_result': 'Готово: {created} створено, {updated} оновлено, {errors} помилок',
+    'admin.restore_error': 'Невірний файл резервної копії',
   },
 };
 

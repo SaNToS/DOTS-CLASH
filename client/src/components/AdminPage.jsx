@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Edit2, Trash2, Gem, X, Check, ChevronLeft } from 'lucide-react';
+import { Search, Edit2, Trash2, Gem, X, Check, ChevronLeft, Download, Upload } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 const API = `http://${window.location.hostname}:3001/api/admin`;
@@ -24,6 +24,11 @@ export default function AdminPage() {
   const [bonusUser, setBonusUser] = useState(null);
   const [bonusAmount, setBonusAmount] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [restoreData, setRestoreData] = useState(null); // parsed backup JSON
+  const [restorePasswords, setRestorePasswords] = useState(false);
+  const [restoreResult, setRestoreResult] = useState(null);
+  const [restoring, setRestoring] = useState(false);
+  const fileInputRef = useRef(null);
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -102,6 +107,55 @@ export default function AdminPage() {
     setSaving(false);
   };
 
+  const handleDownloadBackup = async () => {
+    const res = await fetch(`${API}/backup`, { headers: authHeaders() });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dots_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        if (!Array.isArray(parsed.users)) throw new Error('invalid');
+        setRestoreData(parsed);
+        setRestoreResult(null);
+        setRestorePasswords(false);
+      } catch {
+        setRestoreData({ error: true });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleRestore = async () => {
+    if (!restoreData || restoreData.error) return;
+    setRestoring(true);
+    try {
+      const res = await fetch(`${API}/restore`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ users: restoreData.users, restorePasswords })
+      });
+      const result = await res.json();
+      setRestoreResult(result);
+      if (result.ok) { loadUsers(); setRestoreData(null); }
+    } catch {
+      setRestoreResult({ ok: false });
+    }
+    setRestoring(false);
+  };
+
   if (accessDenied) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -125,6 +179,31 @@ export default function AdminPage() {
         </button>
         <h1 className="text-2xl font-black text-white">{t('admin.title')}</h1>
       </div>
+
+      {/* Backup / Restore toolbar */}
+      <div className="flex gap-3 mb-5">
+        <button
+          onClick={handleDownloadBackup}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-700/30 hover:bg-emerald-700/50 text-emerald-300 border border-emerald-700/40 rounded-xl text-sm font-semibold transition-colors"
+        >
+          <Download className="w-4 h-4" /> {t('admin.backup')}
+        </button>
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center gap-2 px-4 py-2 bg-amber-700/30 hover:bg-amber-700/50 text-amber-300 border border-amber-700/40 rounded-xl text-sm font-semibold transition-colors"
+        >
+          <Upload className="w-4 h-4" /> {t('admin.restore')}
+        </button>
+        <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileChange} />
+      </div>
+
+      {restoreResult && (
+        <div className={`mb-4 px-4 py-3 rounded-xl text-sm font-semibold border ${restoreResult.ok ? 'bg-emerald-900/40 border-emerald-700/40 text-emerald-300' : 'bg-red-900/40 border-red-700/40 text-red-300'}`}>
+          {restoreResult.ok
+            ? t('admin.restore_result', { created: restoreResult.created, updated: restoreResult.updated, errors: restoreResult.errors })
+            : t('admin.restore_error')}
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative mb-6">
@@ -233,6 +312,49 @@ export default function AdminPage() {
               <button onClick={handleSaveEdit} disabled={saving} className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
                 <Check className="w-4 h-4" /> {t('admin.save')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restore confirmation modal */}
+      {restoreData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="font-bold text-white text-lg">{t('admin.restore_title')}</h2>
+              <button onClick={() => setRestoreData(null)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            {restoreData.error ? (
+              <p className="text-red-400 text-sm mb-5">{t('admin.restore_error')}</p>
+            ) : (
+              <>
+                <p className="text-slate-300 text-sm mb-4">
+                  {t('admin.restore_info', {
+                    date: restoreData.exportedAt ? new Date(restoreData.exportedAt).toLocaleDateString() : '?',
+                    count: restoreData.userCount ?? restoreData.users?.length ?? 0
+                  })}
+                </p>
+                <label className="flex items-center gap-3 cursor-pointer mb-5">
+                  <input
+                    type="checkbox"
+                    checked={restorePasswords}
+                    onChange={e => setRestorePasswords(e.target.checked)}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                  <span className="text-sm text-slate-300">{t('admin.restore_passwords')}</span>
+                </label>
+              </>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => setRestoreData(null)} className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-semibold text-sm">
+                {t('admin.cancel')}
+              </button>
+              {!restoreData.error && (
+                <button onClick={handleRestore} disabled={restoring} className="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+                  <Upload className="w-4 h-4" /> {t('admin.restore_confirm')}
+                </button>
+              )}
             </div>
           </div>
         </div>

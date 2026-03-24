@@ -99,4 +99,94 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// ── Backup: export all users as JSON ─────────────────────────────────────
+router.get('/backup', requireAdmin, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true, username: true, passwordHash: true,
+        wins: true, losses: true, draws: true,
+        rating: true, totalGames: true, timePlayed: true,
+        bonuses: true, createdAt: true
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      userCount: users.length,
+      users
+    };
+
+    const filename = `dots_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.json(payload);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Restore: upsert users from backup JSON ────────────────────────────────
+// Body: { users: [...], restorePasswords: boolean }
+// Existing users → update stats (and optionally password hash)
+// New users       → create with all fields from backup
+router.post('/restore', requireAdmin, async (req, res) => {
+  try {
+    const { users, restorePasswords = false } = req.body;
+    if (!Array.isArray(users) || users.length === 0) {
+      return res.status(400).json({ error: 'Invalid backup: users array is empty or missing' });
+    }
+
+    let created = 0, updated = 0, errors = 0;
+
+    for (const u of users) {
+      if (!u.username) { errors++; continue; }
+      try {
+        const existing = await prisma.user.findUnique({ where: { username: u.username } });
+
+        if (existing) {
+          const data = {
+            wins:       Number(u.wins       ?? existing.wins),
+            losses:     Number(u.losses     ?? existing.losses),
+            draws:      Number(u.draws      ?? existing.draws),
+            rating:     Number(u.rating     ?? existing.rating),
+            totalGames: Number(u.totalGames ?? existing.totalGames),
+            timePlayed: Number(u.timePlayed ?? existing.timePlayed),
+            bonuses:    Number(u.bonuses    ?? existing.bonuses),
+          };
+          if (restorePasswords && u.passwordHash) data.passwordHash = u.passwordHash;
+          await prisma.user.update({ where: { username: u.username }, data });
+          updated++;
+        } else {
+          // Require a valid password hash for new accounts
+          if (!u.passwordHash) { errors++; continue; }
+          await prisma.user.create({
+            data: {
+              username:     u.username,
+              passwordHash: u.passwordHash,
+              wins:         Number(u.wins       ?? 0),
+              losses:       Number(u.losses     ?? 0),
+              draws:        Number(u.draws      ?? 0),
+              rating:       Number(u.rating     ?? 1200),
+              totalGames:   Number(u.totalGames ?? 0),
+              timePlayed:   Number(u.timePlayed ?? 0),
+              bonuses:      Number(u.bonuses    ?? 0),
+            }
+          });
+          created++;
+        }
+      } catch (e) {
+        console.error(`Restore: error processing user "${u.username}":`, e.message);
+        errors++;
+      }
+    }
+
+    res.json({ ok: true, created, updated, errors, total: users.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

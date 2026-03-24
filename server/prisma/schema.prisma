@@ -1,0 +1,39 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  wins         Int      @default(0)
+  losses       Int      @default(0)
+  draws        Int      @default(0)
+  rating       Int      @default(1200)
+  totalGames   Int      @default(0)
+  timePlayed   Int      @default(0)  // seconds
+  bonuses      Int      @default(0)  // undo tokens
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model GameRecord {
+  id          String   @id @default(uuid())
+  roomId      String   @unique
+  player1     String
+  player2     String
+  score1      Int
+  score2      Int
+  winnerIndex Int?
+  reason      String
+  duration    Int      // seconds
+  startedAt   DateTime
+  endedAt     DateTime @default(now())
+  boardState  Json?    // final board matrix
+}

@@ -1,0 +1,368 @@
+import { createContext, useContext, useState } from 'react';
+
+const translations = {
+  en: {
+    // App nav
+    'nav.play': 'Play',
+    'nav.leaderboard': 'Leaderboard',
+
+    // Landing
+    'landing.tag': 'Multiplayer Strategy Reimagined',
+    'landing.headline': 'OUTSMART YOUR\nOPPONENT',
+    'landing.subtitle': 'Dots Clash is a competitive tactical game where every move counts. Enclose enemy dots, capture territory, and rise to the top of the global leaderboards.',
+    'landing.play': 'PLAY NOW FOR FREE',
+    'landing.rankings': 'VIEW RANKINGS',
+    'landing.feat1.title': 'Fast Paced',
+    'landing.feat1.desc': 'Jump right into the action. No downloads, no waiting. Experience seamless real-time multiplayer warfare.',
+    'landing.feat2.title': 'Pure Strategy',
+    'landing.feat2.desc': 'Easy to learn, brutally hard to master. Encircle enemy dots to claim their territory and steal their points.',
+    'landing.feat3.title': 'Global Ranks',
+    'landing.feat3.desc': 'Create an account and climb the ELO ladder. Prove you are the absolute grandmaster of Dots Clash.',
+
+    // Lobby
+    'lobby.title': 'NEXUS LOBBY',
+    'lobby.online': 'Online',
+    'lobby.offline': 'Offline',
+    'lobby.logged_in_as': 'Logged in as',
+    'lobby.guest': 'Guest',
+    'lobby.login': 'Login',
+    'lobby.register': 'Register',
+    'lobby.guest_nickname': 'Guest Nickname',
+    'lobby.username': 'Username',
+    'lobby.password': 'Password',
+    'lobby.log_in': 'Log In',
+    'lobby.create_account': 'Create Account',
+    'lobby.create_ops': 'CREATE OPERATIONS',
+    'lobby.join_ops': 'JOIN OPERATIONS',
+    'lobby.board_size': 'Board Size',
+    'lobby.my_color': 'My Color',
+    'lobby.piece_style': 'Piece Style',
+    'lobby.dots': 'Dots',
+    'lobby.crosses': 'Crosses & Noughts',
+    'lobby.create_game': 'Create Game',
+    'lobby.join_game': 'Join Game',
+    'lobby.room_code': 'Room Code',
+    'lobby.vs_ai': 'Vs AI',
+    'lobby.ranked': 'Ranked',
+    'lobby.resume': 'RESUME MATCH',
+    'lobby.rejoin': 'Rejoin',
+    'lobby.searching': 'SEARCHING OPPONENTS...',
+    'lobby.cancel': 'Cancel Search',
+    'lobby.instructions': 'Codex Instructions',
+    'lobby.rule1': 'Place points to form impenetrable loops.',
+    'lobby.rule2': 'Fully encircle enemy territory to assimilate their points.',
+    'lobby.rule3': 'Dominate the grid. Highest mass wins exactly when the grid fills.',
+    'lobby.leaderboard': 'Leaderboard',
+    'lobby.close': 'Close',
+    'lobby.no_players': 'No players yet.',
+
+    // GameRoom
+    'game.room': 'Room',
+    'game.you': 'You',
+    'game.waiting': 'Waiting for opponent',
+    'game.share_code': 'Share room code',
+    'game.connecting': 'Connecting to server...',
+    'game.loading': 'Loading game settings...',
+    'game.pass': 'Pass',
+    'game.resign': 'Resign',
+    'game.offer_draw': 'Draw',
+    'game.chat': 'Match Chat',
+    'game.chat_placeholder': 'Type message...',
+    'game.no_messages': 'No messages yet. Say hello!',
+    'game.rules_title': 'Rules of Dots Clash',
+    'game.rule1': 'A dice roll determines who moves first.',
+    'game.rule2': 'Place dots to form continuous loops around enemy dots.',
+    'game.rule3': 'When you surround enemy dots completely, you capture territory!',
+    'game.rule4': 'Points = number of enemy dots captured.',
+    'game.rule5': 'Game ends when the board is full or players pass consecutively.',
+    'game.got_it': 'Got it',
+    'game.rolling': 'Rolling for first turn...',
+    'game.goes_first': '{name} goes first!',
+    'game.you_won': 'You Won!',
+    'game.congrats': 'Congratulations on your victory!',
+    'game.draw': 'Draw!',
+    'game.you_lost': 'You Lost',
+    'game.better_luck': 'Better luck next time!',
+    'game.opponent_abandoned': 'Opponent abandoned the game',
+    'game.share': 'Share this game',
+    'game.copy_link': 'Copy link',
+    'game.copied': 'Copied!',
+    'game.return_lobby': 'Return to Lobby',
+    'game.play_again': 'Play Again',
+    'game.opponent_disconnected': '{name} disconnected. Waiting 60s...',
+    'game.draw_offer': '{name} offers a draw',
+    'game.accept': 'Accept',
+    'game.decline': 'Decline',
+    'game.draw_declined': 'Draw offer declined',
+
+    // Undo / Bonuses
+    'game.undo': 'Undo',
+    'game.undo_cost': '(costs {n} bonus)',
+    'game.bonuses': 'Bonuses',
+    'game.buy_bonuses': 'Get Bonuses',
+    'game.no_bonuses': 'Not enough bonuses',
+    'game.no_history': 'Nothing to undo',
+    'bonus.title': 'Get Bonuses',
+    'bonus.subtitle': 'Bonuses let you undo moves. Win games to earn them, or get a pack.',
+    'bonus.earn': 'Earn {n} per win',
+    'bonus.balance': 'Your balance: {n}',
+    'bonus.small': '5 bonuses',
+    'bonus.medium': '20 bonuses',
+    'bonus.large': '50 bonuses',
+    'bonus.buy': 'Get',
+    'bonus.close': 'Close',
+
+    // GameResultPage
+    'result.title': 'Game Result',
+    'result.winner': 'Winner',
+    'result.draw': 'Draw!',
+    'result.board': 'Final Board State',
+    'result.no_board': 'Board snapshot not available for this game',
+    'result.duration': 'Duration',
+    'result.played': 'Played',
+    'result.share': 'Share this game',
+    'result.copy': 'Copy Link',
+    'result.copied': 'Copied!',
+    'result.back': 'Back Home',
+    'result.loading': 'Loading...',
+    'result.not_found': 'Game result not found. It may not have been saved yet.',
+    'result.play_again': 'Play Again',
+
+    // Leaderboard
+    'lb.title': 'HALL OF FAME',
+    'lb.subtitle': 'Top players worldwide',
+    'lb.back': 'Back Home',
+    'lb.games': 'Games',
+    'lb.time': 'Time',
+    'lb.no_data': 'No grandmasters yet. Be the first to claim the throne!',
+
+    // Lobby bonuses
+    'lobby.bonuses': 'Bonuses',
+    'lobby.buy_bonuses': 'Get Bonuses',
+
+    // Admin panel
+    'admin.title': 'Admin Panel',
+    'admin.users': 'Users',
+    'admin.search': 'Search users...',
+    'admin.id': 'ID',
+    'admin.username': 'Username',
+    'admin.rating': 'Rating',
+    'admin.wins': 'W',
+    'admin.losses': 'L',
+    'admin.draws': 'D',
+    'admin.games': 'Games',
+    'admin.bonuses': 'Bonuses',
+    'admin.actions': 'Actions',
+    'admin.edit': 'Edit',
+    'admin.delete': 'Delete',
+    'admin.save': 'Save',
+    'admin.cancel': 'Cancel',
+    'admin.award_bonuses': 'Award Bonuses',
+    'admin.amount': 'Amount (negative to deduct)',
+    'admin.apply': 'Apply',
+    'admin.confirm_delete': 'Delete user {name}? This cannot be undone.',
+    'admin.new_password': 'New Password (leave blank to keep)',
+    'admin.back': 'Back Home',
+    'admin.no_access': 'Access Denied',
+    'admin.loading': 'Loading...',
+    'admin.joined': 'Joined',
+  },
+  ua: {
+    // App nav
+    'nav.play': 'Грати',
+    'nav.leaderboard': 'Рейтинг',
+
+    // Landing
+    'landing.tag': 'Мультиплеєр стратегії переосмислено',
+    'landing.headline': 'ПЕРЕХИТРИ СВОГО\nСУПЕРНИКА',
+    'landing.subtitle': 'Dots Clash — конкурентна тактична гра, де кожен хід важливий. Оточуй точки суперника, захоплюй територію та підіймайся на вершину глобального рейтингу.',
+    'landing.play': 'ГРАТИ БЕЗКОШТОВНО',
+    'landing.rankings': 'ПЕРЕГЛЯНУТИ РЕЙТИНГ',
+    'landing.feat1.title': 'Швидкий темп',
+    'landing.feat1.desc': 'Одразу в бій. Без завантажень та очікувань. Безперебійний мультиплеєр у реальному часі.',
+    'landing.feat2.title': 'Чиста стратегія',
+    'landing.feat2.desc': 'Легко навчитись, важко опанувати. Оточуй крапки суперника, щоб захопити їхню територію та очки.',
+    'landing.feat3.title': 'Глобальний рейтинг',
+    'landing.feat3.desc': 'Створи акаунт і підіймайся рейтингом ELO. Доведи, що ти справжній гросмейстер Dots Clash.',
+
+    // Lobby
+    'lobby.title': 'ЛОБІ',
+    'lobby.online': 'Онлайн',
+    'lobby.offline': 'Офлайн',
+    'lobby.logged_in_as': 'Увійшов як',
+    'lobby.guest': 'Гість',
+    'lobby.login': 'Вхід',
+    'lobby.register': 'Реєстрація',
+    'lobby.guest_nickname': 'Нікнейм гостя',
+    'lobby.username': "Ім'я користувача",
+    'lobby.password': 'Пароль',
+    'lobby.log_in': 'Увійти',
+    'lobby.create_account': 'Створити акаунт',
+    'lobby.create_ops': 'СТВОРИТИ ГРУ',
+    'lobby.join_ops': 'ПРИЄДНАТИСЬ',
+    'lobby.board_size': 'Розмір поля',
+    'lobby.my_color': 'Мій колір',
+    'lobby.piece_style': 'Стиль фігур',
+    'lobby.dots': 'Крапки',
+    'lobby.crosses': 'Хрестики та нулики',
+    'lobby.create_game': 'Створити гру',
+    'lobby.join_game': 'Приєднатись',
+    'lobby.room_code': 'Код кімнати',
+    'lobby.vs_ai': 'Проти ШІ',
+    'lobby.ranked': 'Рейтинг',
+    'lobby.resume': 'ПРОДОВЖИТИ ГРУ',
+    'lobby.rejoin': 'Повернутись',
+    'lobby.searching': 'ШУКАЄМО СУПЕРНИКА...',
+    'lobby.cancel': 'Скасувати пошук',
+    'lobby.instructions': 'Правила',
+    'lobby.rule1': 'Розставляй крапки, утворюючи замкнуті петлі.',
+    'lobby.rule2': 'Повністю оточи ворожі крапки, щоб захопити їхні очки.',
+    'lobby.rule3': 'Заволодій полем. Перемагає той, у кого більше крапок.',
+    'lobby.leaderboard': 'Рейтинг',
+    'lobby.close': 'Закрити',
+    'lobby.no_players': 'Гравців ще немає.',
+
+    // GameRoom
+    'game.room': 'Кімната',
+    'game.you': 'Ти',
+    'game.waiting': 'Очікування суперника',
+    'game.share_code': 'Поділись кодом кімнати',
+    'game.connecting': 'Підключення до сервера...',
+    'game.loading': 'Завантаження гри...',
+    'game.pass': 'Пас',
+    'game.resign': 'Здатись',
+    'game.offer_draw': 'Нічия',
+    'game.chat': 'Чат',
+    'game.chat_placeholder': 'Написати повідомлення...',
+    'game.no_messages': 'Поки немає повідомлень. Привітайся!',
+    'game.rules_title': 'Правила Dots Clash',
+    'game.rule1': 'Хто ходить першим — визначає кидок кубика.',
+    'game.rule2': 'Розставляй крапки, утворюючи петлі навколо крапок суперника.',
+    'game.rule3': 'Якщо ти повністю оточив ворожі крапки — захоплюєш їхню територію!',
+    'game.rule4': 'Очки = кількість захоплених крапок суперника.',
+    'game.rule5': 'Гра закінчується, коли поле заповнене або обидва гравці пасують.',
+    'game.got_it': 'Зрозуміло',
+    'game.rolling': 'Кидаємо кубик...',
+    'game.goes_first': '{name} ходить першим!',
+    'game.you_won': 'Ти переміг!',
+    'game.congrats': 'Вітаємо з перемогою!',
+    'game.draw': 'Нічия!',
+    'game.you_lost': 'Ти програв',
+    'game.better_luck': 'Наступного разу пощастить!',
+    'game.opponent_abandoned': 'Суперник покинув гру',
+    'game.share': 'Поділитись грою',
+    'game.copy_link': 'Скопіювати',
+    'game.copied': 'Скопійовано!',
+    'game.return_lobby': 'До лобі',
+    'game.play_again': 'Грати знову',
+    'game.opponent_disconnected': '{name} відключився. Очікування 60с...',
+    'game.draw_offer': '{name} пропонує нічию',
+    'game.accept': 'Прийняти',
+    'game.decline': 'Відхилити',
+    'game.draw_declined': 'Пропозицію нічиї відхилено',
+
+    // Undo / Bonuses
+    'game.undo': 'Відмінити',
+    'game.undo_cost': '(коштує {n} бонус)',
+    'game.bonuses': 'Бонуси',
+    'game.buy_bonuses': 'Отримати бонуси',
+    'game.no_bonuses': 'Недостатньо бонусів',
+    'game.no_history': 'Немає ходів для відміни',
+    'bonus.title': 'Отримати бонуси',
+    'bonus.subtitle': 'Бонуси дозволяють відміняти ходи. Заробляй їх за перемоги або придбай пакет.',
+    'bonus.earn': 'Заробляй {n} за перемогу',
+    'bonus.balance': 'Твій баланс: {n}',
+    'bonus.small': '5 бонусів',
+    'bonus.medium': '20 бонусів',
+    'bonus.large': '50 бонусів',
+    'bonus.buy': 'Отримати',
+    'bonus.close': 'Закрити',
+
+    // GameResultPage
+    'result.title': 'Результат гри',
+    'result.winner': 'Переможець',
+    'result.draw': 'Нічия!',
+    'result.board': 'Фінальний стан поля',
+    'result.no_board': 'Знімок поля недоступний для цієї гри',
+    'result.duration': 'Тривалість',
+    'result.played': 'Зіграно',
+    'result.share': 'Поділитись грою',
+    'result.copy': 'Скопіювати',
+    'result.copied': 'Скопійовано!',
+    'result.back': 'На головну',
+    'result.loading': 'Завантаження...',
+    'result.not_found': 'Результат гри не знайдено. Можливо, він ще не збережений.',
+    'result.play_again': 'Грати знову',
+
+    // Leaderboard
+    'lb.title': 'ЗАЛ СЛАВИ',
+    'lb.subtitle': 'Найкращі гравці у світі',
+    'lb.back': 'На головну',
+    'lb.games': 'Ігри',
+    'lb.time': 'Час',
+    'lb.no_data': 'Гросмейстрів ще немає. Будь першим!',
+
+    // Lobby bonuses
+    'lobby.bonuses': 'Бонуси',
+    'lobby.buy_bonuses': 'Отримати бонуси',
+
+    // Admin panel
+    'admin.title': 'Адмін панель',
+    'admin.users': 'Користувачі',
+    'admin.search': 'Пошук користувачів...',
+    'admin.id': 'ID',
+    'admin.username': 'Нікнейм',
+    'admin.rating': 'Рейтинг',
+    'admin.wins': 'П',
+    'admin.losses': 'П',
+    'admin.draws': 'Н',
+    'admin.games': 'Ігри',
+    'admin.bonuses': 'Бонуси',
+    'admin.actions': 'Дії',
+    'admin.edit': 'Редагувати',
+    'admin.delete': 'Видалити',
+    'admin.save': 'Зберегти',
+    'admin.cancel': 'Скасувати',
+    'admin.award_bonuses': 'Нарахувати бонуси',
+    'admin.amount': 'Кількість (від\'ємне — відняти)',
+    'admin.apply': 'Застосувати',
+    'admin.confirm_delete': 'Видалити {name}? Цю дію не можна скасувати.',
+    'admin.new_password': 'Новий пароль (залиш порожнім, щоб не змінювати)',
+    'admin.back': 'На головну',
+    'admin.no_access': 'Доступ заборонено',
+    'admin.loading': 'Завантаження...',
+    'admin.joined': 'Зареєстровано',
+  },
+};
+
+const LanguageContext = createContext(null);
+
+export function LanguageProvider({ children }) {
+  const [lang, setLang] = useState(() => localStorage.getItem('dots_lang') || 'en');
+
+  const toggleLang = () => {
+    const next = lang === 'en' ? 'ua' : 'en';
+    setLang(next);
+    localStorage.setItem('dots_lang', next);
+  };
+
+  const t = (key, vars) => {
+    let str = translations[lang]?.[key] ?? translations.en[key] ?? key;
+    if (vars) {
+      Object.entries(vars).forEach(([k, v]) => {
+        str = str.replace(`{${k}}`, v);
+      });
+    }
+    return str;
+  };
+
+  return (
+    <LanguageContext.Provider value={{ lang, toggleLang, t }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+}
+
+export function useLanguage() {
+  return useContext(LanguageContext);
+}

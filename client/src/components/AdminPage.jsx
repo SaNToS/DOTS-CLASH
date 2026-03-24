@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Edit2, Trash2, Gem, X, Check, ChevronLeft, Download, Upload } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
-const API = `http://${window.location.hostname}:3001/api/admin`;
+const API = '/api/admin';
 
 function getToken() {
   return localStorage.getItem('dots_token');

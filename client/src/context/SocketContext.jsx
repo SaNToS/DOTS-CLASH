@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 
 const SocketContext = createContext();
 
-const HOST = import.meta.env.VITE_SERVER_URL || `http://${window.location.hostname}:3001`;
+const HOST = import.meta.env.VITE_SERVER_URL || window.location.origin;
 
 export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);

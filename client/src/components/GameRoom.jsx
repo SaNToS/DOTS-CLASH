@@ -226,8 +226,7 @@ export default function GameRoom() {
     if (!token) return;
     setBuyLoading(pack);
     try {
-      const HOST = import.meta.env.VITE_SERVER_URL || `http://${window.location.hostname}:3001`;
-      const res = await fetch(`${HOST}/api/auth/bonuses/purchase`, {
+      const res = await fetch('/api/auth/bonuses/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ pack }),

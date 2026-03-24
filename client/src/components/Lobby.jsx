@@ -36,7 +36,7 @@ export default function Lobby() {
       setUser({ token, username: storedUser });
       setAuthMode('logged_in');
       setNickname(storedUser);
-      fetch(`http://${window.location.hostname}:3001/api/auth/bonuses`, {
+      fetch('/api/auth/bonuses', {
         headers: { Authorization: `Bearer ${token}` }
       }).then(r => r.ok ? r.json() : null).then(d => { if (d) setBonuses(d.bonuses); }).catch(() => {});
     }
@@ -95,7 +95,7 @@ export default function Lobby() {
 
   const fetchLeaderboard = async () => {
     try {
-      const res = await fetch(`http://${window.location.hostname}:3001/api/leaderboard`);
+      const res = await fetch('/api/leaderboard');
       if (res.ok) {
         const data = await res.json();
         setLeaderboardData(data);
@@ -116,7 +116,7 @@ export default function Lobby() {
     const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
 
     try {
-      const res = await fetch(`http://${window.location.hostname}:3001${endpoint}`, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: nickname, password })
@@ -152,7 +152,7 @@ export default function Lobby() {
     if (!user) return;
     setBuyLoading(true);
     try {
-      const res = await fetch(`http://${window.location.hostname}:3001/api/auth/bonuses/purchase`, {
+      const res = await fetch('/api/auth/bonuses/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
         body: JSON.stringify({ pack })

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Trophy, Clock, ArrowLeft, Share2, Copy, Check, Play } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
-const HOST = import.meta.env.VITE_SERVER_URL || `http://${window.location.hostname}:3001`;
+const HOST = import.meta.env.VITE_SERVER_URL || '';
 
 const fmt = (secs) => {
   if (!secs) return '0s';

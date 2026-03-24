@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import clsx from 'clsx';
 import { User, KeyRound, Play, Trophy, LogIn, UserPlus, LogOut, Gem, X } from 'lucide-react';
@@ -29,7 +29,10 @@ export default function Lobby() {
 
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useLanguage();
+
+  const [paymentStatus, setPaymentStatus] = useState(null); // 'success' | 'cancel' | null
 
   useEffect(() => {
     const token = localStorage.getItem('dots_token');
@@ -41,6 +44,25 @@ export default function Lobby() {
       fetch('/api/auth/bonuses', {
         headers: { Authorization: `Bearer ${token}` }
       }).then(r => r.ok ? r.json() : null).then(d => { if (d) setBonuses(d.bonuses); }).catch(() => {});
+    }
+
+    // Handle return from Stripe Checkout
+    const payment = searchParams.get('payment');
+    if (payment === 'success') {
+      setPaymentStatus('success');
+      setSearchParams({});
+      // Re-fetch bonus balance after successful payment
+      if (token) {
+        fetch('/api/auth/bonuses', { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.ok ? r.json() : null)
+          .then(d => { if (d) setBonuses(d.bonuses); })
+          .catch(() => {});
+      }
+      setTimeout(() => setPaymentStatus(null), 5000);
+    } else if (payment === 'cancel') {
+      setPaymentStatus('cancel');
+      setSearchParams({});
+      setTimeout(() => setPaymentStatus(null), 4000);
     }
   }, []);
 
@@ -154,25 +176,23 @@ export default function Lobby() {
     if (!user) return;
     setBuyLoading(pack);
     setBuyError('');
-    setBuySuccess(0);
     try {
-      const res = await fetch('/api/auth/bonuses/purchase', {
+      const res = await fetch('/api/payment/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
         body: JSON.stringify({ pack })
       });
       const data = await res.json();
-      if (res.ok) {
-        setBonuses(data.bonuses);
-        setBuySuccess(data.added);
-        setTimeout(() => setShowBonusModal(false), 1200);
+      if (res.ok && data.url) {
+        window.location.href = data.url; // redirect to Stripe Checkout
       } else {
-        setBuyError(data.error || 'Purchase failed');
+        setBuyError(data.error || 'Could not start payment');
+        setBuyLoading(false);
       }
     } catch {
       setBuyError('Network error — try again');
+      setBuyLoading(false);
     }
-    setBuyLoading(false);
   };
 
   const handlePlaySubmit = (e) => {
@@ -254,6 +274,17 @@ export default function Lobby() {
         className="w-full max-w-md bg-gradient-to-b from-slate-800/90 to-slate-900/90 rounded-[2rem] p-8 border border-white/10 shadow-[0_0_50px_-12px_rgba(59,130,246,0.4)] relative overflow-hidden backdrop-blur-2xl ring-1 ring-white/5"
       >
       <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.15),transparent_50%)] pointer-events-none animate-pulse-slow z-0" />
+
+      {paymentStatus === 'success' && (
+        <div className="relative z-10 mb-4 px-4 py-3 bg-emerald-600/20 border border-emerald-500/40 rounded-xl text-emerald-300 text-sm font-semibold text-center">
+          Payment successful! Bonuses added to your account.
+        </div>
+      )}
+      {paymentStatus === 'cancel' && (
+        <div className="relative z-10 mb-4 px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-slate-400 text-sm text-center">
+          Payment cancelled.
+        </div>
+      )}
 
       <div className="relative z-10">
         <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/10">

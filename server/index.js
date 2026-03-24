@@ -7,9 +7,14 @@ const cors = require('cors');
 const roomManager = require('./roomManager');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
+const paymentRoutes = require('./routes/payment');
 
 const app = express();
 app.use(cors());
+
+// Stripe webhook needs raw body — mount BEFORE express.json()
+app.use('/api/payment', paymentRoutes);
+
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);

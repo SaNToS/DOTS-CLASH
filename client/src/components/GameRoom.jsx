@@ -226,16 +226,14 @@ export default function GameRoom() {
     if (!token) return;
     setBuyLoading(pack);
     try {
-      const res = await fetch('/api/auth/bonuses/purchase', {
+      const res = await fetch('/api/payment/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ pack }),
       });
       if (res.ok) {
         const data = await res.json();
-        // bonuses state is managed by socket events; optimistically update via refetch is not needed
-        // The server doesn't emit bonuses_updated on purchase, so just close modal
-        // We re-fetch on next game start; for now show a quick feedback
+        if (data.url) { window.location.href = data.url; return; }
         setShowBonusModal(false);
       }
     } catch (e) { /* ignore */ }

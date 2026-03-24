@@ -24,6 +24,9 @@ services:
       - JWT_SECRET=supersecret_dots_key_prod
       - PORT=3001
       - ADMIN_USERNAMES=alex
+      - STRIPE_SECRET_KEY=sk_live_YOUR_KEY_HERE
+      - STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET_HERE
+      - CLIENT_URL=https://dotsclash.xyz
     depends_on:
       - db
     restart: unless-stopped

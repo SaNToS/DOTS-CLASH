@@ -12,7 +12,7 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d dots"]
+      test: ["CMD-SHELL", "psql -U postgres -d dots -c '\\q' 2>/dev/null || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10

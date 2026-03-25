@@ -4,28 +4,55 @@ set -e
 export DOCKER_BUILDKIT=1
 export COMPOSE_DOCKER_CLI_BUILD=1
 
+DEPLOY_FILE=".last_deploy_commit"
+
+# ── Optional forced targets: ./deploy.sh [client|server|all] ────────────
+FORCE="$1"
+
 echo "Pulling latest changes..."
 git pull
 
-CHANGED=$(git diff HEAD@{1} --name-only 2>/dev/null || echo "all")
+CURRENT=$(git rev-parse HEAD)
+LAST=$(cat "$DEPLOY_FILE" 2>/dev/null || echo "")
 
-# ── CLIENT — needs Vite rebuild ──────────────────────────────────────────
-if echo "$CHANGED" | grep -q "^client/" || [ "$CHANGED" = "all" ]; then
-  echo ">>> Rebuilding client..."
+if [ -n "$LAST" ] && [ "$LAST" != "$CURRENT" ]; then
+  CHANGED=$(git diff "$LAST" "$CURRENT" --name-only 2>/dev/null || echo "all")
+else
+  CHANGED="all"
+fi
+
+echo "$CURRENT" > "$DEPLOY_FILE"
+
+# ── Determine what to update ─────────────────────────────────────────────
+DO_CLIENT=0
+DO_SERVER=0
+
+if [ "$FORCE" = "client" ] || [ "$FORCE" = "all" ]; then
+  DO_CLIENT=1
+fi
+if [ "$FORCE" = "server" ] || [ "$FORCE" = "all" ]; then
+  DO_SERVER=1
+fi
+
+if [ -z "$FORCE" ]; then
+  echo "$CHANGED" | grep -q "^client/" && DO_CLIENT=1
+  echo "$CHANGED" | grep -q "^server/" && DO_SERVER=1
+  [ "$CHANGED" = "all" ] && DO_CLIENT=1 && DO_SERVER=1
+fi
+
+# ── CLIENT ───────────────────────────────────────────────────────────────
+if [ "$DO_CLIENT" = "1" ]; then
+  echo ">>> Rebuilding client (Vite build)..."
   docker compose up -d --build client
 fi
 
 # ── SERVER ───────────────────────────────────────────────────────────────
-if echo "$CHANGED" | grep -q "^server/" || [ "$CHANGED" = "all" ]; then
-
-  # Rebuild image only if node_modules need to change
-  if echo "$CHANGED" | grep -q "server/package"; then
-    echo ">>> Rebuilding server (package.json changed)..."
+if [ "$DO_SERVER" = "1" ]; then
+  if echo "$CHANGED" | grep -q "server/package" || [ "$FORCE" = "server" ] || [ "$FORCE" = "all" ]; then
+    echo ">>> Rebuilding server image (package.json changed)..."
     docker compose up -d --build server
   else
-    # Source files are mounted — just restart the container
-    # prisma generate + db push run automatically on startup
-    echo ">>> Restarting server (source is mounted, no rebuild needed)..."
+    echo ">>> Restarting server (source is mounted)..."
     docker compose restart server
   fi
 fi

@@ -3,7 +3,7 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY . .
 RUN --mount=type=cache,target=/app/node_modules/.vite npm run build

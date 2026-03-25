@@ -6,7 +6,7 @@ RUN apt-get update -y && apt-get install -y openssl
 
 WORKDIR /app
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY . .
 

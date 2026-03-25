@@ -18,6 +18,8 @@ export default function LeaderboardPage() {
   const navigate = useNavigate();
   const { t } = useLanguage();
 
+  useEffect(() => { document.title = 'Leaderboard — Dots Clash'; }, []);
+
   useEffect(() => {
     const fetchBoard = async () => {
       try {

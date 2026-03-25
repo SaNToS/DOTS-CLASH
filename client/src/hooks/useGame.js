@@ -22,6 +22,16 @@ export const useGame = (socket, roomId, myNickname) => {
   const [bonuses, setBonuses] = useState(0);
   const [undoDenied, setUndoDenied] = useState(null); // 'no_bonuses' | 'no_history' | null
 
+  // Fetch bonuses immediately on mount so they show without waiting for game_start
+  useEffect(() => {
+    const token = localStorage.getItem('dots_token');
+    if (!token) return;
+    fetch('/api/auth/bonuses', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.bonuses !== undefined) setBonuses(d.bonuses); })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!socket) return;
 

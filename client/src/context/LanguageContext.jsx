@@ -95,6 +95,22 @@ const translations = {
     'game.decline': 'Decline',
     'game.draw_declined': 'Draw offer declined',
 
+    // Invite & Join
+    'game.invite_title': 'Invite a Friend',
+    'game.invite_copy': 'Copy Link',
+    'game.invite_copied': 'Copied!',
+    'game.invite_telegram': 'Telegram',
+    'game.invite_whatsapp': 'WhatsApp',
+    'game.invite_msg': 'Join me in Dots Clash! Click to play:',
+    'game.join_title': 'Join the Game',
+    'game.join_subtitle': 'You were invited to play Dots Clash',
+    'game.join_guest_tab': 'Quick Join',
+    'game.join_login_tab': 'Log In',
+    'game.join_nickname': 'Your Nickname',
+    'game.join_btn': 'Join Game',
+    'game.join_login_hint': 'Log in to save your stats',
+    'game.join_full': 'Game already started or room is full',
+
     // Undo / Bonuses
     'game.undo': 'Undo',
     'game.undo_cost': '(costs {n} bonus)',
@@ -268,6 +284,22 @@ const translations = {
     'game.accept': 'Прийняти',
     'game.decline': 'Відхилити',
     'game.draw_declined': 'Пропозицію нічиї відхилено',
+
+    // Invite & Join
+    'game.invite_title': 'Запросити друга',
+    'game.invite_copy': 'Копіювати посилання',
+    'game.invite_copied': 'Скопійовано!',
+    'game.invite_telegram': 'Telegram',
+    'game.invite_whatsapp': 'WhatsApp',
+    'game.invite_msg': 'Пограємо в Dots Clash! Переходь за посиланням:',
+    'game.join_title': 'Приєднатись до гри',
+    'game.join_subtitle': 'Тебе запросили зіграти в Dots Clash',
+    'game.join_guest_tab': 'Швидко',
+    'game.join_login_tab': 'Увійти',
+    'game.join_nickname': 'Твій нікнейм',
+    'game.join_btn': 'Приєднатись',
+    'game.join_login_hint': 'Увійди, щоб зберегти статистику',
+    'game.join_full': 'Гра вже розпочалась або кімната заповнена',
 
     // Undo / Bonuses
     'game.undo': 'Відмінити',

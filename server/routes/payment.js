@@ -16,7 +16,7 @@ const PACKS = {
 // POST /api/payment/create-checkout
 // Body: { pack: 'small'|'medium'|'large' }
 // Header: Authorization: Bearer <token>
-router.post('/create-checkout', async (req, res) => {
+router.post('/create-checkout', express.json(), async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'Unauthorized' });

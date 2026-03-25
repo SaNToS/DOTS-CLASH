@@ -30,6 +30,8 @@ export default function Lobby() {
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => { document.title = 'Play — Dots Clash'; }, []);
   const { t } = useLanguage();
 
   const [paymentStatus, setPaymentStatus] = useState(null); // 'success' | 'cancel' | null

@@ -181,7 +181,9 @@ export default function GameRoom() {
   const { roomId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const nickname = location.state?.nickname || sessionStorage.getItem('nickname') || '';
+  const [nickname, setNickname] = useState(
+    location.state?.nickname || sessionStorage.getItem('nickname') || ''
+  );
   const { t } = useLanguage();
 
   const { socket, isConnected } = useSocket();
@@ -216,6 +218,14 @@ export default function GameRoom() {
 
   // Victory share state
   const [copied, setCopied] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  // Join form state (for invited visitors)
+  const [joinNick, setJoinNick] = useState('');
+  const [joinPass, setJoinPass] = useState('');
+  const [joinMode, setJoinMode] = useState('guest'); // 'guest' | 'login'
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinError, setJoinError] = useState('');
 
   // Bonus shop state
   const [showBonusModal, setShowBonusModal] = useState(false);
@@ -283,14 +293,12 @@ export default function GameRoom() {
     }
   }, [gameOverResult, myPlayerIndex, playVictoryFanfare]);
 
-  // Save nickname
+  // Save nickname + page title
   useEffect(() => {
-    if (nickname) {
-      sessionStorage.setItem('nickname', nickname);
-    } else {
-      navigate('/');
-    }
-  }, [nickname, navigate]);
+    if (nickname) sessionStorage.setItem('nickname', nickname);
+    document.title = `Room ${roomId} — Dots Clash`;
+    return () => { document.title = 'Dots Clash — Multiplayer Strategy Game'; };
+  }, [nickname, roomId]);
 
   useEffect(() => {
     if (chat.length === 0) return;
@@ -311,6 +319,59 @@ export default function GameRoom() {
     setTimeout(() => setCopied(false), 2000);
   }, [roomId]);
 
+  const handleInviteCopy = useCallback(() => {
+    const url = `${window.location.origin}/room/${roomId}`;
+    navigator.clipboard.writeText(url);
+    setInviteCopied(true);
+    setTimeout(() => setInviteCopied(false), 2000);
+  }, [roomId]);
+
+  const handleInviteTelegram = useCallback(() => {
+    const url = encodeURIComponent(`${window.location.origin}/room/${roomId}`);
+    const text = encodeURIComponent(t('game.invite_msg'));
+    window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
+  }, [roomId, t]);
+
+  const handleInviteWhatsApp = useCallback(() => {
+    const url = `${window.location.origin}/room/${roomId}`;
+    const text = encodeURIComponent(`${t('game.invite_msg')} ${url}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  }, [roomId, t]);
+
+  const handleGuestJoin = () => {
+    const n = joinNick.trim();
+    if (!n) return;
+    sessionStorage.setItem('nickname', n);
+    setNickname(n);
+    socket.emit('join_room', { nickname: n, roomId });
+  };
+
+  const handleLoginJoin = async () => {
+    if (!joinNick.trim() || !joinPass.trim()) return;
+    setJoinLoading(true);
+    setJoinError('');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: joinNick.trim(), password: joinPass.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('dots_token', data.token);
+        localStorage.setItem('dots_username', data.username);
+        sessionStorage.setItem('nickname', data.username);
+        setNickname(data.username);
+        socket.emit('join_room', { nickname: data.username, roomId, token: data.token });
+      } else {
+        setJoinError(data.error || 'Login failed');
+      }
+    } catch {
+      setJoinError('Network error');
+    }
+    setJoinLoading(false);
+  };
+
   if (!isConnected) {
     return (
       <div className="flex flex-col items-center justify-center p-10">
@@ -324,6 +385,72 @@ export default function GameRoom() {
     return (
       <div className="flex flex-col items-center justify-center p-10">
         <span className="text-slate-300 font-medium">{t('game.loading')}</span>
+      </div>
+    );
+  }
+
+  // Show join form for invited visitors who have no nickname yet
+  if (!nickname) {
+    const isFull = room.status !== 'waiting';
+    return (
+      <div className="flex items-center justify-center min-h-[70vh] px-4">
+        <div className="w-full max-w-sm bg-slate-800/90 border border-slate-700 rounded-3xl p-8 shadow-2xl backdrop-blur-xl">
+          <div className="text-center mb-6">
+            <div className="w-14 h-14 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">🎮</span>
+            </div>
+            <h2 className="text-xl font-black text-white">{t('game.join_title')}</h2>
+            <p className="text-sm text-slate-400 mt-1">{t('game.join_subtitle')}</p>
+          </div>
+
+          {isFull ? (
+            <p className="text-center text-red-400 text-sm font-semibold">{t('game.join_full')}</p>
+          ) : (
+            <>
+              <div className="flex gap-1 p-1 bg-slate-900/60 rounded-xl mb-5">
+                <button onClick={() => setJoinMode('guest')} className={`flex-1 py-1.5 text-sm font-semibold rounded-lg transition-colors ${joinMode === 'guest' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>{t('game.join_guest_tab')}</button>
+                <button onClick={() => setJoinMode('login')} className={`flex-1 py-1.5 text-sm font-semibold rounded-lg transition-colors ${joinMode === 'login' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>{t('game.join_login_tab')}</button>
+              </div>
+
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={joinNick}
+                  onChange={e => setJoinNick(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && (joinMode === 'guest' ? handleGuestJoin() : handleLoginJoin())}
+                  placeholder={joinMode === 'guest' ? t('game.join_nickname') : t('lobby.username')}
+                  maxLength={15}
+                  autoFocus
+                  className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
+                />
+                {joinMode === 'login' && (
+                  <input
+                    type="password"
+                    value={joinPass}
+                    onChange={e => setJoinPass(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleLoginJoin()}
+                    placeholder={t('lobby.password')}
+                    className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
+                  />
+                )}
+                {joinError && <p className="text-red-400 text-xs">{joinError}</p>}
+                {joinMode === 'login' && <p className="text-slate-500 text-xs">{t('game.join_login_hint')}</p>}
+              </div>
+
+              <button
+                onClick={joinMode === 'guest' ? handleGuestJoin : handleLoginJoin}
+                disabled={joinLoading || !joinNick.trim()}
+                className="w-full mt-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-colors disabled:opacity-50"
+              >
+                {joinLoading ? '...' : t('game.join_btn')}
+              </button>
+            </>
+          )}
+
+          <button onClick={() => navigate('/')} className="w-full mt-3 py-2 text-slate-500 hover:text-slate-300 text-sm transition-colors">
+            ← {t('admin.back')}
+          </button>
+        </div>
       </div>
     );
   }
@@ -575,10 +702,37 @@ export default function GameRoom() {
 
             {/* Waiting overlay */}
             {room.status === 'waiting' && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-sm rounded-2xl">
-                <RotateCcw className="w-12 h-12 text-blue-400 mb-4 animate-spin-slow" />
-                <h2 className="text-2xl font-bold text-white mb-2">{t('game.waiting')}</h2>
-                <p className="text-slate-400">{t('game.share_code')} <span className="text-white font-mono bg-slate-800 px-2 py-1 rounded">{roomId}</span></p>
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-900/85 backdrop-blur-sm rounded-2xl px-6">
+                <RotateCcw className="w-12 h-12 text-blue-400 mb-4 animate-spin [animation-direction:reverse]" />
+                <h2 className="text-2xl font-bold text-white mb-1">{t('game.waiting')}</h2>
+                <p className="text-slate-400 mb-6 text-sm">{t('game.share_code')} <span className="text-white font-mono bg-slate-800 px-2 py-1 rounded">{roomId}</span></p>
+
+                <div className="w-full max-w-xs space-y-2">
+                  <p className="text-xs text-slate-500 text-center uppercase tracking-widest mb-3">{t('game.invite_title')}</p>
+                  <button
+                    onClick={handleInviteCopy}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm font-semibold transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                    {inviteCopied ? t('game.invite_copied') : t('game.invite_copy')}
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleInviteTelegram}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#2AABEE]/20 hover:bg-[#2AABEE]/40 border border-[#2AABEE]/40 text-[#2AABEE] rounded-xl text-sm font-semibold transition-colors"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                      {t('game.invite_telegram')}
+                    </button>
+                    <button
+                      onClick={handleInviteWhatsApp}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#25D366]/20 hover:bg-[#25D366]/40 border border-[#25D366]/40 text-[#25D366] rounded-xl text-sm font-semibold transition-colors"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+                      {t('game.invite_whatsapp')}
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 

@@ -119,6 +119,8 @@ export default function GameResultPage() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => { document.title = 'Game Result — Dots Clash'; return () => { document.title = 'Dots Clash — Multiplayer Strategy Game'; }; }, []);
+
   useEffect(() => {
     fetch(`${HOST}/api/game/${roomId}`)
       .then(r => r.ok ? r.json() : null)

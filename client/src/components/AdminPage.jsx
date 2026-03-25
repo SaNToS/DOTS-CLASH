@@ -32,6 +32,8 @@ export default function AdminPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
+  useEffect(() => { document.title = 'Admin — Dots Clash'; return () => { document.title = 'Dots Clash — Multiplayer Strategy Game'; }; }, []);
+
   useEffect(() => {
     fetch(`${API}/check`, { headers: authHeaders() })
       .then(r => {

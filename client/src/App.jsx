@@ -54,8 +54,8 @@ function AppInner() {
       </div>
 
       {!isGameRoute && (
-        <header className="w-full max-w-6xl flex justify-between items-center py-6 px-6 z-10">
-          <Link to="/" className="text-2xl md:text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 tracking-tighter drop-shadow-md hover:opacity-80 transition-opacity">
+        <header className="relative z-50 w-full max-w-6xl flex justify-between items-center py-6 px-6">
+          <Link to="/" className="text-2xl md:text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 tracking-tighter drop-shadow-[0_0_15px_rgba(168,85,247,0.5)] hover:opacity-80 transition-opacity">
             DOTS CLASH
           </Link>
           <nav className="flex items-center gap-3 text-sm font-semibold text-slate-400">

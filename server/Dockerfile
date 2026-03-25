@@ -16,4 +16,4 @@ RUN npx prisma generate
 EXPOSE 3001
 
 # The start script can run migrations before starting
-CMD ["sh", "-c", "npx prisma db push && node index.js"]
+CMD ["sh", "-c", "npx prisma generate && npx prisma db push && node index.js"]

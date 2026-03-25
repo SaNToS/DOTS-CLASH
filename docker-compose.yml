@@ -33,6 +33,9 @@ services:
       - STRIPE_SECRET_KEY=sk_live_YOUR_KEY_HERE
       - STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET_HERE
       - CLIENT_URL=https://dotsclash.xyz
+    volumes:
+      - ./server:/app
+      - /app/node_modules
     depends_on:
       db:
         condition: service_healthy

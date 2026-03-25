@@ -158,23 +158,28 @@ router.post('/restore', requireAdmin, async (req, res) => {
           };
           if (restorePasswords && u.passwordHash) data.passwordHash = u.passwordHash;
           await prisma.user.update({ where: { username: u.username }, data });
+          // If ID changed (DB was reset), log for info but don't block
+          if (u.id && existing.id !== u.id) {
+            console.log(`Restore: user "${u.username}" ID mismatch (backup: ${u.id}, current: ${existing.id}) — existing JWT tokens may be invalid`);
+          }
           updated++;
         } else {
           // Require a valid password hash for new accounts
           if (!u.passwordHash) { errors++; continue; }
-          await prisma.user.create({
-            data: {
-              username:     u.username,
-              passwordHash: u.passwordHash,
-              wins:         Number(u.wins       ?? 0),
-              losses:       Number(u.losses     ?? 0),
-              draws:        Number(u.draws      ?? 0),
-              rating:       Number(u.rating     ?? 1200),
-              totalGames:   Number(u.totalGames ?? 0),
-              timePlayed:   Number(u.timePlayed ?? 0),
-              bonuses:      Number(u.bonuses    ?? 0),
-            }
-          });
+          const createData = {
+            username:     u.username,
+            passwordHash: u.passwordHash,
+            wins:         Number(u.wins       ?? 0),
+            losses:       Number(u.losses     ?? 0),
+            draws:        Number(u.draws      ?? 0),
+            rating:       Number(u.rating     ?? 1200),
+            totalGames:   Number(u.totalGames ?? 0),
+            timePlayed:   Number(u.timePlayed ?? 0),
+            bonuses:      Number(u.bonuses    ?? 0),
+          };
+          // Preserve original ID so existing JWT tokens remain valid
+          if (u.id) createData.id = u.id;
+          await prisma.user.create({ data: createData });
           created++;
         }
       } catch (e) {

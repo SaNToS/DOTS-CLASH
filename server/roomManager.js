@@ -590,7 +590,9 @@ const endGame = (roomId, io, reason, winnerIndex = null) => {
         if (winner === i && room.players[i]?.id) {
           io.to(room.players[i].id).emit('bonuses_updated', { bonuses: updated.bonuses });
         }
-      }).catch(console.error);
+      }).catch(e => {
+        if (e.code !== 'P2025') console.error('DB update err', e);
+      });
     }
   } catch(e) { console.error('DB update err', e); }
 

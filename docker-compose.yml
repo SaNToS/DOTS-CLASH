@@ -22,8 +22,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     container_name: dots_server
-    ports:
-      - "3001:3001"
+    # Port 3001 intentionally NOT exposed — client nginx proxies internally
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/dots?schema=public
       - JWT_SECRET=supersecret_dots_key_prod

@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM node:20-slim
 
 # Install OpenSSL required by Prisma
@@ -5,7 +6,7 @@ RUN apt-get update -y && apt-get install -y openssl
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline
 
 COPY . .
 

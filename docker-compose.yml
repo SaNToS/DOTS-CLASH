@@ -11,7 +11,7 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "psql -U postgres -d dots -c '\\q' 2>/dev/null || exit 1"]
+      test: [ "CMD-SHELL", "psql -U postgres -d dots -c '\\q' 2>/dev/null || exit 1" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -28,7 +28,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/dots?schema=public
       - JWT_SECRET=supersecret_dots_key_prod
       - PORT=3001
-      - ADMIN_USERNAMES=alex
+      - ADMIN_USERNAMES=sashokc
       - STRIPE_SECRET_KEY=sk_live_YOUR_KEY_HERE
       - STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET_HERE
       - CLIENT_URL=https://dotsclash.xyz

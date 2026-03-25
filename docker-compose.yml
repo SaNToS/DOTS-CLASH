@@ -11,6 +11,12 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dots"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   server:
     build:
@@ -28,7 +34,8 @@ services:
       - STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET_HERE
       - CLIENT_URL=https://dotsclash.xyz
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   client:

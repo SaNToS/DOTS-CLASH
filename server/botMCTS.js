@@ -99,7 +99,7 @@ const rollout = (board, score, turn, botIdx, size) => {
 
 // ─── MCTS Main ─────────────────────────────────────────────────────────────
 
-const getBotMoveMCTS = (game, botPlayerIndex) => {
+const getBotMoveMCTS = (game, botPlayerIndex, iterations = ITERATIONS) => {
   const size   = game.boardSize;
   const board  = game.board;
   const score  = game.score;
@@ -135,7 +135,7 @@ const getBotMoveMCTS = (game, botPlayerIndex) => {
     null
   );
 
-  for (let iter = 0; iter < ITERATIONS; iter++) {
+  for (let iter = 0; iter < iterations; iter++) {
     // 1. Selection — walk down the tree via UCB1
     let node = root;
     while (

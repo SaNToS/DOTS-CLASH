@@ -341,7 +341,7 @@ const handleMove = (socket, io, data) => {
   }
 };
 
-const handleBotMove = (roomId, io, playerIndex) => {
+const handleBotMove = async (roomId, io, playerIndex) => {
   const room = rooms[roomId];
   if (!room || room.status !== 'playing') return;
 
@@ -350,8 +350,16 @@ const handleBotMove = (roomId, io, playerIndex) => {
   let move;
   try {
     if (room.botType === 'mcts') {
-      const { getBotMoveMCTS } = require('./botMCTS');
-      move = getBotMoveMCTS(game, playerIndex);
+      const { getBotMoveMCTSAsync } = require('./botMCTS');
+      // 5 s hard timeout — fall back to minimax if workers stall
+      move = await Promise.race([
+        getBotMoveMCTSAsync(game, playerIndex),
+        new Promise(resolve => setTimeout(() => resolve(null), 5000)),
+      ]);
+      if (!move) {
+        const { getBotMove } = require('./botAI');
+        move = getBotMove(game, playerIndex);
+      }
     } else {
       const { getBotMove } = require('./botAI');
       move = getBotMove(game, playerIndex);

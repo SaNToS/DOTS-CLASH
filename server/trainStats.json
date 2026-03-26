@@ -1,0 +1,49 @@
+{
+  "totalGames": 21,
+  "wins": {
+    "p0": 13,
+    "p1": 6,
+    "draw": 2
+  },
+  "sessions": [
+    {
+      "date": "2026-03-26T09:02:27.566Z",
+      "games": 1,
+      "mode": "mixed",
+      "boardSize": 10,
+      "mctsIters": 200,
+      "wins": [
+        0,
+        0,
+        1
+      ],
+      "durationMs": 35435
+    },
+    {
+      "date": "2026-03-26T09:16:37.813Z",
+      "games": 10,
+      "mode": "mixed",
+      "boardSize": 10,
+      "mctsIters": 200,
+      "wins": [
+        7,
+        3,
+        0
+      ],
+      "durationMs": 321501
+    },
+    {
+      "date": "2026-03-26T09:39:48.190Z",
+      "games": 10,
+      "mode": "mixed",
+      "boardSize": 10,
+      "mctsIters": 200,
+      "wins": [
+        6,
+        3,
+        1
+      ],
+      "durationMs": 204581
+    }
+  ]
+}

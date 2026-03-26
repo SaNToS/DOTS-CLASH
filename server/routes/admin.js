@@ -1,7 +1,12 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
 const prisma = require('../prisma/db');
+
+const BOT_MEMORY_FILE  = path.join(__dirname, '..', 'botMemory.json');
+const TRAIN_STATS_FILE = path.join(__dirname, '..', 'trainStats.json');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret_dots_key';
@@ -189,6 +194,94 @@ router.post('/restore', requireAdmin, async (req, res) => {
     }
 
     res.json({ ok: true, created, updated, errors, total: users.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Bot Memory: download ───────────────────────────────────────────────────
+router.get('/bot-memory', requireAdmin, (req, res) => {
+  try {
+    const raw = fs.existsSync(BOT_MEMORY_FILE)
+      ? fs.readFileSync(BOT_MEMORY_FILE, 'utf8')
+      : JSON.stringify({ botPatterns: {}, humanPatterns: {}, gamesPlayed: 0, wins: 0, losses: 0 });
+    const data = JSON.parse(raw);
+
+    // Attach train stats if available
+    let trainStats = null;
+    if (fs.existsSync(TRAIN_STATS_FILE)) {
+      try { trainStats = JSON.parse(fs.readFileSync(TRAIN_STATS_FILE, 'utf8')); } catch {}
+    }
+
+    const filename = `botMemory_${new Date().toISOString().slice(0, 10)}.json`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.json({ ...data, _trainStats: trainStats });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Bot Memory: stats only (for UI display) ────────────────────────────────
+router.get('/bot-memory/stats', requireAdmin, (req, res) => {
+  try {
+    let memory = { botPatterns: {}, humanPatterns: {}, gamesPlayed: 0, wins: 0, losses: 0 };
+    if (fs.existsSync(BOT_MEMORY_FILE)) {
+      try { memory = JSON.parse(fs.readFileSync(BOT_MEMORY_FILE, 'utf8')); } catch {}
+    }
+    let trainStats = null;
+    if (fs.existsSync(TRAIN_STATS_FILE)) {
+      try { trainStats = JSON.parse(fs.readFileSync(TRAIN_STATS_FILE, 'utf8')); } catch {}
+    }
+    res.json({
+      gamesPlayed:    memory.gamesPlayed   || 0,
+      wins:           memory.wins          || 0,
+      losses:         memory.losses        || 0,
+      botPatterns:    Object.keys(memory.botPatterns   || {}).length,
+      humanPatterns:  Object.keys(memory.humanPatterns || {}).length,
+      trainStats,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Bot Memory: restore from uploaded JSON ────────────────────────────────
+router.post('/bot-memory', requireAdmin, (req, res) => {
+  try {
+    const { botPatterns, humanPatterns, gamesPlayed, wins, losses } = req.body;
+    if (typeof botPatterns !== 'object' || typeof humanPatterns !== 'object') {
+      return res.status(400).json({ error: 'Invalid bot memory format' });
+    }
+    const data = {
+      botPatterns:   botPatterns   || {},
+      humanPatterns: humanPatterns || {},
+      gamesPlayed:   Number(gamesPlayed)  || 0,
+      wins:          Number(wins)         || 0,
+      losses:        Number(losses)       || 0,
+    };
+    fs.writeFileSync(BOT_MEMORY_FILE, JSON.stringify(data));
+    // Invalidate in-memory cache so next bot move loads fresh data
+    try {
+      const botAI = require('../botAI');
+      if (botAI.saveMemory) botAI.saveMemory(data);
+    } catch {}
+    res.json({ ok: true, botPatterns: Object.keys(data.botPatterns).length, humanPatterns: Object.keys(data.humanPatterns).length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Bot Memory: reset to defaults ─────────────────────────────────────────
+router.delete('/bot-memory', requireAdmin, (req, res) => {
+  try {
+    const defaults = { botPatterns: {}, humanPatterns: {}, gamesPlayed: 0, wins: 0, losses: 0 };
+    fs.writeFileSync(BOT_MEMORY_FILE, JSON.stringify(defaults));
+    try {
+      const botAI = require('../botAI');
+      if (botAI.saveMemory) botAI.saveMemory(defaults);
+    } catch {}
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

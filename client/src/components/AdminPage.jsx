@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Edit2, Trash2, Gem, X, Check, ChevronLeft, Download, Upload } from 'lucide-react';
+import { Search, Edit2, Trash2, Gem, X, Check, ChevronLeft, Download, Upload, Brain, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 const API = '/api/admin';
@@ -24,11 +24,16 @@ export default function AdminPage() {
   const [bonusUser, setBonusUser] = useState(null);
   const [bonusAmount, setBonusAmount] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [restoreData, setRestoreData] = useState(null); // parsed backup JSON
+  const [restoreData, setRestoreData] = useState(null);
   const [restorePasswords, setRestorePasswords] = useState(false);
   const [restoreResult, setRestoreResult] = useState(null);
   const [restoring, setRestoring] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Bot memory state
+  const [botStats, setBotStats] = useState(null);
+  const [botMemoryMsg, setBotMemoryMsg] = useState('');
+  const botMemoryInputRef = useRef(null);
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -158,6 +163,64 @@ export default function AdminPage() {
     setRestoring(false);
   };
 
+  // ── Bot memory handlers ──────────────────────────────────────────────────
+  const loadBotStats = async () => {
+    try {
+      const res = await fetch(`${API}/bot-memory/stats`, { headers: authHeaders() });
+      if (res.ok) setBotStats(await res.json());
+    } catch {}
+  };
+
+  useEffect(() => { if (!accessDenied && !loading) loadBotStats(); }, [accessDenied, loading]);
+
+  const handleDownloadBotMemory = async () => {
+    const res = await fetch(`${API}/bot-memory`, { headers: authHeaders() });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `botMemory_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBotMemoryFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        // Strip _trainStats before sending (server doesn't need it back)
+        delete parsed._trainStats;
+        if (typeof parsed.botPatterns !== 'object') throw new Error('invalid');
+        const res = await fetch(`${API}/bot-memory`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(parsed),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          setBotMemoryMsg(`Відновлено: ${data.botPatterns} bot-патернів, ${data.humanPatterns} human-патернів`);
+          loadBotStats();
+        } else {
+          setBotMemoryMsg('Помилка: ' + (data.error || 'невідома'));
+        }
+      } catch {
+        setBotMemoryMsg('Помилка: невірний формат файлу');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleResetBotMemory = async () => {
+    if (!window.confirm('Скинути всю пам\'ять бота? Всі вивчені патерни будуть видалені.')) return;
+    const res = await fetch(`${API}/bot-memory`, { method: 'DELETE', headers: authHeaders() });
+    if (res.ok) { setBotMemoryMsg('Пам\'ять бота скинута до заводських налаштувань'); loadBotStats(); }
+  };
+
   if (accessDenied) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -206,6 +269,58 @@ export default function AdminPage() {
             : t('admin.restore_error')}
         </div>
       )}
+
+      {/* Bot Intelligence */}
+      <div className="mb-6 p-4 bg-slate-800/60 border border-purple-700/30 rounded-2xl">
+        <div className="flex items-center gap-2 mb-3">
+          <Brain className="w-4 h-4 text-purple-400" />
+          <h2 className="text-sm font-bold text-purple-300 uppercase tracking-widest">Bot Intelligence</h2>
+        </div>
+
+        {botStats && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+            {[
+              { label: 'Партій зіграно', val: botStats.gamesPlayed },
+              { label: 'Bot-патерни',    val: botStats.botPatterns },
+              { label: 'Opp-патерни',    val: botStats.humanPatterns },
+              { label: 'Самонавчання',   val: botStats.trainStats ? `${botStats.trainStats.totalGames} ігор` : '—' },
+            ].map(({ label, val }) => (
+              <div key={label} className="bg-slate-900/60 rounded-xl p-2 text-center">
+                <div className="text-xs text-slate-500 mb-0.5">{label}</div>
+                <div className="text-sm font-bold text-white">{val}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={handleDownloadBotMemory}
+            className="flex items-center gap-2 px-3 py-2 bg-purple-700/30 hover:bg-purple-700/50 text-purple-300 border border-purple-700/40 rounded-xl text-sm font-semibold transition-colors"
+          >
+            <Download className="w-4 h-4" /> Бекап пам'яті
+          </button>
+          <button
+            onClick={() => botMemoryInputRef.current?.click()}
+            className="flex items-center gap-2 px-3 py-2 bg-amber-700/30 hover:bg-amber-700/50 text-amber-300 border border-amber-700/40 rounded-xl text-sm font-semibold transition-colors"
+          >
+            <Upload className="w-4 h-4" /> Відновити пам'ять
+          </button>
+          <button
+            onClick={handleResetBotMemory}
+            className="flex items-center gap-2 px-3 py-2 bg-red-700/20 hover:bg-red-700/40 text-red-400 border border-red-700/30 rounded-xl text-sm font-semibold transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" /> Скинути
+          </button>
+          <input ref={botMemoryInputRef} type="file" accept=".json" className="hidden" onChange={handleBotMemoryFile} />
+        </div>
+
+        {botMemoryMsg && (
+          <div className="mt-2 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900/60 border border-slate-700/40 text-slate-300">
+            {botMemoryMsg}
+          </div>
+        )}
+      </div>
 
       {/* Search */}
       <div className="relative mb-6">

@@ -516,4 +516,9 @@ module.exports = {
   getPatternKey,
   getBotMove,
   updatePatternsFromGame,
+  // Shared simulation helpers (used by botMCTS.js)
+  runCaptures,
+  simulateMove,
+  getCandidateMoves,
+  reachableAreaFill,
 };

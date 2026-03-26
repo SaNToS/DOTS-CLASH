@@ -16,6 +16,7 @@ export default function Lobby() {
   const [user, setUser] = useState(null);
 
   const [settings, setSettings] = useState({ boardSize: 20, pieceStyle: 'dots', color: 'blue' });
+  const [botType, setBotType] = useState('minimax'); // 'minimax' | 'mcts'
   const [error, setError] = useState('');
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState([]);
@@ -225,7 +226,7 @@ export default function Lobby() {
     }
     const playName = user ? user.username : nickname;
     const token = user ? user.token : null;
-    socket.emit('create_bot_room', { nickname: playName, settings, token });
+    socket.emit('create_bot_room', { nickname: playName, settings, token, botType });
   };
 
   const handleFindMatch = () => {
@@ -471,10 +472,25 @@ export default function Lobby() {
 
               {mode === 'create' && (
                 <div className="flex gap-3">
-                  <button type="button" onClick={handleBotSubmit} disabled={!isConnected} className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-blue-500/50 text-white py-3 px-2 rounded-2xl font-bold transition-all duration-300 active:scale-95 disabled:opacity-50">
-                    <User className="w-5 h-5 text-blue-400" />
-                    <span className="text-[11px] uppercase tracking-wider">{t('lobby.vs_ai')}</span>
-                  </button>
+                  <div className="flex-1 flex flex-col gap-2">
+                    {/* Bot type toggle */}
+                    <div className="flex rounded-xl overflow-hidden border border-slate-600 text-[10px] font-bold uppercase tracking-wider">
+                      <button
+                        type="button"
+                        onClick={() => setBotType('minimax')}
+                        className={clsx('flex-1 py-1.5 transition-colors', botType === 'minimax' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200')}
+                      >Minimax</button>
+                      <button
+                        type="button"
+                        onClick={() => setBotType('mcts')}
+                        className={clsx('flex-1 py-1.5 transition-colors', botType === 'mcts' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200')}
+                      >MCTS</button>
+                    </div>
+                    <button type="button" onClick={handleBotSubmit} disabled={!isConnected} className="flex flex-col items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-blue-500/50 text-white py-3 px-2 rounded-2xl font-bold transition-all duration-300 active:scale-95 disabled:opacity-50">
+                      <User className="w-5 h-5 text-blue-400" />
+                      <span className="text-[11px] uppercase tracking-wider">{t('lobby.vs_ai')}</span>
+                    </button>
+                  </div>
                   <button type="button" onClick={handleFindMatch} disabled={!isConnected} className="flex-1 flex flex-col items-center justify-center gap-1 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/40 hover:border-yellow-400 hover:shadow-[0_0_20px_rgba(234,179,8,0.3)] text-yellow-500 py-3 px-2 rounded-2xl font-bold transition-all duration-300 active:scale-95 disabled:opacity-50">
                     <Trophy className="w-5 h-5 text-yellow-400 drop-shadow-[0_0_5px_rgba(234,179,8,0.8)]" />
                     <span className="text-[11px] uppercase tracking-wider">{t('lobby.ranked')}</span>

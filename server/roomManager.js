@@ -64,6 +64,7 @@ const createBotRoom = (socket, io, data) => {
       boardSize: settings.boardSize || 20,
       pieceStyle: settings.pieceStyle || 'dots',
     },
+    botType: data.botType === 'mcts' ? 'mcts' : 'minimax',
     status: 'playing',
     game: null,
     timers: {},
@@ -345,11 +346,16 @@ const handleBotMove = (roomId, io, playerIndex) => {
   if (!room || room.status !== 'playing') return;
 
   const game = room.game;
-  const { getBotMove } = require('./botAI');
 
   let move;
   try {
-    move = getBotMove(game, playerIndex);
+    if (room.botType === 'mcts') {
+      const { getBotMoveMCTS } = require('./botMCTS');
+      move = getBotMoveMCTS(game, playerIndex);
+    } else {
+      const { getBotMove } = require('./botAI');
+      move = getBotMove(game, playerIndex);
+    }
   } catch (err) {
     console.error('Bot move error:', err);
     move = null;

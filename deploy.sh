@@ -10,7 +10,10 @@ DEPLOY_FILE=".last_deploy_commit"
 FORCE="$1"
 
 echo "Pulling latest changes..."
+# Stash runtime files git tracks but shouldn't (botMemory.json accumulates learned data)
+git stash push -m "deploy-autostash" -- server/botMemory.json 2>/dev/null || true
 git pull
+git stash pop 2>/dev/null || true
 
 CURRENT=$(git rev-parse HEAD)
 LAST=$(cat "$DEPLOY_FILE" 2>/dev/null || echo "")

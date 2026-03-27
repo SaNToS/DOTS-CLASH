@@ -40,7 +40,7 @@ const processMove = (game, x, y, playerIndex, patternKey = null) => {
   game.passes = 0; // reset passes
 
   // Detect captures
-  const captureResult = detectCaptures(game, playerIndex);
+  const captureResult = detectCaptures(game, playerIndex, { x, y });
 
   // Next turn
   game.turn = game.turn === 0 ? 1 : 0;
@@ -49,7 +49,8 @@ const processMove = (game, x, y, playerIndex, patternKey = null) => {
   return { 
     success: true, 
     captures: captureResult.captures,
-    territories: captureResult.territories
+    territories: captureResult.territories,
+    contourPaths: captureResult.contourPaths
   };
 };
 
@@ -58,7 +59,71 @@ const passTurn = (game) => {
   game.turn = game.turn === 0 ? 1 : 0;
 };
 
-const detectCaptures = (game, playerIndex) => {
+/**
+ * Compute contour path: find the boundary dots of the capturing player 
+ * that surround a captured territory, ordered as a closed loop starting 
+ * from the dot nearest to `startPos`.
+ */
+const computeContourPath = (board, territoryCells, playerDot, boardSize, startPos) => {
+  const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+  const terrSet = new Set(territoryCells.map(c => `${c.x},${c.y}`));
+  const boundarySet = new Set();
+  const boundaryDots = [];
+
+  // Find all player dots adjacent (8-dir) to any territory cell
+  for (const cell of territoryCells) {
+    for (const [dx, dy] of dirs) {
+      const nx = cell.x + dx;
+      const ny = cell.y + dy;
+      if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize) {
+        if (board[ny][nx] === playerDot && !terrSet.has(`${nx},${ny}`)) {
+          const key = `${nx},${ny}`;
+          if (!boundarySet.has(key)) {
+            boundarySet.add(key);
+            boundaryDots.push({ x: nx, y: ny });
+          }
+        }
+      }
+    }
+  }
+
+  if (boundaryDots.length < 2) return boundaryDots;
+
+  // Order boundary dots into a contour loop using nearest-neighbor walk
+  // Start from the dot closest to startPos
+  const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+  const used = new Set();
+
+  // Find starting dot (nearest to the last placed move)
+  let startIdx = 0;
+  let minDist = Infinity;
+  for (let i = 0; i < boundaryDots.length; i++) {
+    const d = dist2(boundaryDots[i], startPos);
+    if (d < minDist) { minDist = d; startIdx = i; }
+  }
+
+  const ordered = [boundaryDots[startIdx]];
+  used.add(`${boundaryDots[startIdx].x},${boundaryDots[startIdx].y}`);
+
+  while (ordered.length < boundaryDots.length) {
+    const last = ordered[ordered.length - 1];
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < boundaryDots.length; i++) {
+      const key = `${boundaryDots[i].x},${boundaryDots[i].y}`;
+      if (used.has(key)) continue;
+      const d = dist2(last, boundaryDots[i]);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+    if (bestIdx === -1) break;
+    used.add(`${boundaryDots[bestIdx].x},${boundaryDots[bestIdx].y}`);
+    ordered.push(boundaryDots[bestIdx]);
+  }
+
+  return ordered;
+};
+
+const detectCaptures = (game, playerIndex, lastMovePos) => {
   const size = game.boardSize;
   const board = game.board;
   const p = playerIndex + 1; // 1 or 2
@@ -104,6 +169,7 @@ const detectCaptures = (game, playerIndex) => {
   const visited = Array.from({ length: size }, () => Array(size).fill(false));
   const newTerritories = [];
   const newlyCapturedEnemies = [];
+  const contourPaths = [];
   let scoreGained = 0;
 
   for (let y = 0; y < size; y++) {
@@ -145,12 +211,14 @@ const detectCaptures = (game, playerIndex) => {
               scoreGained++;
               newlyCapturedEnemies.push({x: cell.x, y: cell.y});
             }
-            // Mark as territory territory
-            // Wait, if it's already an opponent's territory (opp_terr), it becomes our territory
             board[cell.y][cell.x] = p_terr;
             compTerritory.push({x: cell.x, y: cell.y});
           }
           newTerritories.push(compTerritory);
+
+          // Compute contour path for this territory
+          const contour = computeContourPath(board, compTerritory, p, size, lastMovePos || { x: 0, y: 0 });
+          contourPaths.push(contour);
         }
       }
     }
@@ -160,7 +228,8 @@ const detectCaptures = (game, playerIndex) => {
 
   return {
     captures: newlyCapturedEnemies,
-    territories: newTerritories
+    territories: newTerritories,
+    contourPaths
   };
 };
 

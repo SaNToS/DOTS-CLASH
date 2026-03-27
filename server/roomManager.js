@@ -4,12 +4,78 @@ const JWT_SECRET = process.env.JWT_SECRET || 'supersecret_dots_key';
 
 const verifyUser = (token) => {
   if (!token) return null;
-  try { return jwt.verify(token, JWT_SECRET); } catch(e) { return null; }
+  try { return jwt.verify(token, JWT_SECRET); } catch (e) { return null; }
 };
 
 const rooms = {}; // roomId -> roomData
 const userRooms = {}; // socketId -> roomId
 const matchmakingQueue = []; // array of player objects
+
+// Persist active game state to DB (fire-and-forget)
+const saveRoomState = (room) => {
+  if (!room || room.status === 'finished') return;
+  const prisma = require('./prisma/db');
+  const snapshot = {
+    id: room.id,
+    players: room.players.map(p => ({
+      nickname: p.nickname,
+      color: p.color,
+      ready: p.ready,
+      userId: p.userId || null,
+      isGuest: p.isGuest || false,
+      isBot: p.isBot || false,
+      bonuses: p.bonuses || 0,
+    })),
+    settings: room.settings,
+    botType: room.botType || null,
+    status: room.status,
+    game: room.game ? {
+      boardSize: room.game.boardSize,
+      board: room.game.board,
+      turn: room.game.turn,
+      passes: room.game.passes,
+      score: room.game.score,
+      history: room.game.history,
+    } : null,
+    startedAt: room.startedAt || null,
+  };
+  prisma.activeGame.upsert({
+    where: { id: room.id },
+    update: { state: snapshot },
+    create: { id: room.id, state: snapshot },
+  }).catch(e => console.error('saveRoomState error:', e));
+};
+
+// Restore active games from DB after server restart
+const restoreRoomsFromDB = async () => {
+  const prisma = require('./prisma/db');
+  try {
+    const saved = await prisma.activeGame.findMany();
+    for (const ag of saved) {
+      const s = ag.state;
+      if (!s || s.status === 'finished') {
+        await prisma.activeGame.delete({ where: { id: ag.id } }).catch(() => {});
+        continue;
+      }
+      const room = {
+        id: s.id,
+        players: s.players.map(p => ({ ...p, id: null })), // socket IDs are stale
+        settings: s.settings,
+        status: s.status,
+        game: s.game ? { ...s.game } : null,
+        startedAt: s.startedAt,
+        timers: {},
+        chat: [],
+      };
+      if (s.botType) room.botType = s.botType;
+      rooms[room.id] = room;
+      console.log(`Restored room ${room.id} (${s.status})`);
+    }
+    if (saved.length > 0) console.log(`Restored ${saved.length} active game(s) from DB`);
+  } catch (e) {
+    console.error('restoreRoomsFromDB error:', e);
+  }
+};
 
 const generateRoomCode = () => {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -20,7 +86,7 @@ const createRoom = (socket, io, data) => {
   const roomId = generateRoomCode();
   const user = verifyUser(token);
   const actualNickname = user ? user.username : nickname;
-  
+
   rooms[roomId] = {
     id: roomId,
     players: [{ id: socket.id, nickname: actualNickname, color: settings.color || 'blue', ready: true, userId: user ? user.userId : null, isGuest: !user }],
@@ -36,7 +102,7 @@ const createRoom = (socket, io, data) => {
 
   userRooms[socket.id] = roomId;
   socket.join(roomId);
-  
+
   socket.emit('room_created', rooms[roomId]);
 };
 
@@ -45,11 +111,11 @@ const createBotRoom = (socket, io, data) => {
   const roomId = generateRoomCode();
   const user = verifyUser(token);
   const actualNickname = user ? user.username : nickname;
-  
-  const botPlayer = { 
-    id: 'bot-' + Date.now(), 
-    nickname: 'DotMaster Bot', 
-    color: settings.color === 'blue' ? 'red' : 'blue', 
+
+  const botPlayer = {
+    id: 'bot-' + Date.now(),
+    nickname: 'DotMaster Bot',
+    color: settings.color === 'blue' ? 'red' : 'blue',
     ready: true,
     isBot: true
   };
@@ -73,9 +139,9 @@ const createBotRoom = (socket, io, data) => {
 
   userRooms[socket.id] = roomId;
   socket.join(roomId);
-  
+
   socket.emit('room_created', rooms[roomId]);
-  
+
   // Start the game immediately since bot is already here
   startGame(roomId, io);
 };
@@ -97,7 +163,7 @@ const joinRoom = (socket, io, data) => {
   }
 
   const existingPlayerIndex = room.players.findIndex(p => p.nickname === nickname);
-  
+
   if (existingPlayerIndex !== -1) {
     // Reconnection or moving from Lobby to Room with same socket
     room.players[existingPlayerIndex].id = socket.id;
@@ -109,12 +175,12 @@ const joinRoom = (socket, io, data) => {
   }
 
   const pColor = color || (room.players[0].color === 'blue' ? 'red' : 'blue');
-  
+
   const newPlayer = { id: socket.id, nickname: actualNickname, color: pColor, ready: true, userId: user ? user.userId : null, isGuest: !user };
   room.players.push(newPlayer);
   userRooms[socket.id] = roomId;
   socket.join(roomId);
-  
+
   socket.emit('room_joined', room);
   io.to(roomId).emit('player_joined', newPlayer);
 
@@ -142,7 +208,7 @@ const findMatch = (socket, io, data) => {
     // Found match!
     const opponent = matchmakingQueue.shift();
     const roomId = generateRoomCode();
-    
+
     rooms[roomId] = {
       id: roomId,
       players: [
@@ -161,13 +227,13 @@ const findMatch = (socket, io, data) => {
 
     userRooms[opponent.socket.id] = roomId;
     userRooms[socket.id] = roomId;
-    
+
     opponent.socket.join(roomId);
     socket.join(roomId);
 
     opponent.socket.emit('match_found', rooms[roomId]);
     socket.emit('match_found', rooms[roomId]);
-    
+
     startGame(roomId, io);
   } else {
     // Wait in queue
@@ -230,7 +296,7 @@ const checkActiveGame = (socket, data) => {
   const { nickname, token } = data || {};
   const user = verifyUser(token);
   const actualNickname = user ? user.username : nickname;
-  
+
   if (!actualNickname) return;
 
   for (const [roomId, room] of Object.entries(rooms)) {
@@ -282,6 +348,8 @@ const startGame = async (roomId, io) => {
     diceResult: { dice: [d1, d2], firstPlayer }
   });
 
+  saveRoomState(room);
+
   // If the bot goes first, trigger its move after the dice animation
   const firstPlayerObj = room.players[firstPlayer];
   if (firstPlayerObj && firstPlayerObj.isBot) {
@@ -298,38 +366,57 @@ const handleMove = (socket, io, data) => {
 
   const game = room.game;
   const playerIndex = room.players.findIndex(p => p.id === socket.id);
-  
+
   // Is it this player's turn?
   if (game.turn !== playerIndex) return;
 
   const { getPatternKey } = require('./botAI');
   const patternKey = getPatternKey(game.board, x, y, game.boardSize);
   const result = processMove(game, x, y, playerIndex, patternKey);
-  
+
   if (result.success) {
     const nextPlayerIndex = game.turn;
-    
+
     // First emit the move
     io.to(roomId).emit('move_made', {
-      x, y, 
+      x, y,
       playerIndex: playerIndex,
       nextTurn: nextPlayerIndex
     });
 
     if (result.captures && result.captures.length > 0) {
-      // Find territories and captured points
       io.to(roomId).emit('territory_captured', {
         playerIndex: playerIndex,
         captures: result.captures,
-        territories: result.territories, // array of enclosed areas
+        territories: result.territories,
+        contourPaths: result.contourPaths || [],
+        capturedCount: result.captures.length,
         score: game.score
       });
+
+      // Award +1 bonus for capturing >= 3 opponent dots
+      if (result.captures.length >= 3) {
+        const capPlayer = room.players[playerIndex];
+        if (capPlayer && !capPlayer.isBot) {
+          capPlayer.bonuses = (capPlayer.bonuses || 0) + 1;
+          if (capPlayer.userId) {
+            const prisma = require('./prisma/db');
+            prisma.user.update({ where: { id: capPlayer.userId }, data: { bonuses: { increment: 1 } } })
+              .then(updated => {
+                if (capPlayer.id) io.to(capPlayer.id).emit('bonuses_updated', { bonuses: updated.bonuses });
+              }).catch(() => {});
+          } else if (capPlayer.id) {
+            io.to(capPlayer.id).emit('bonuses_updated', { bonuses: capPlayer.bonuses });
+          }
+        }
+      }
     }
 
     // Check game over
     if (!hasMovesLeft(game) || game.passes >= 2) {
       endGame(roomId, io, 'board_full');
     } else {
+      saveRoomState(room);
       // If it's a bot's turn, trigger it
       const nextPlayer = room.players[nextPlayerIndex];
       if (nextPlayer.isBot) {
@@ -370,30 +457,32 @@ const handleBotMove = async (roomId, io, playerIndex) => {
   }
 
   if (move) {
-     const result = processMove(game, move.x, move.y, playerIndex, move.patternKey);
-     if (result.success) {
-        const nextPlayerIndex = game.turn;
-        
-        io.to(roomId).emit('move_made', {
-          x: move.x,
-          y: move.y,
+    const result = processMove(game, move.x, move.y, playerIndex, move.patternKey);
+    if (result.success) {
+      const nextPlayerIndex = game.turn;
+
+      io.to(roomId).emit('move_made', {
+        x: move.x,
+        y: move.y,
+        playerIndex: playerIndex,
+        nextTurn: nextPlayerIndex
+      });
+
+      if (result.captures && result.captures.length > 0) {
+        io.to(roomId).emit('territory_captured', {
           playerIndex: playerIndex,
-          nextTurn: nextPlayerIndex
+          captures: result.captures,
+          territories: result.territories,
+          contourPaths: result.contourPaths || [],
+          capturedCount: result.captures.length,
+          score: game.score
         });
+      }
 
-        if (result.captures && result.captures.length > 0) {
-          io.to(roomId).emit('territory_captured', {
-            playerIndex: playerIndex,
-            captures: result.captures,
-            territories: result.territories,
-            score: game.score
-          });
-        }
-
-        if (!hasMovesLeft(game) || game.passes >= 2) {
-          endGame(roomId, io, 'board_full');
-        }
-     }
+      if (!hasMovesLeft(game) || game.passes >= 2) {
+        endGame(roomId, io, 'board_full');
+      }
+    }
   } else {
     // If bot has no moves, it passes
     passTurn(game);
@@ -412,11 +501,11 @@ const handlePass = (socket, io, data) => {
 
   const game = room.game;
   const playerIndex = room.players.findIndex(p => p.id === socket.id);
-  
+
   if (game.turn !== playerIndex) return;
 
   passTurn(game);
-  
+
   io.to(roomId).emit('turn_passed', {
     playerIndex: playerIndex,
     nextTurn: game.turn
@@ -425,6 +514,7 @@ const handlePass = (socket, io, data) => {
   if (game.passes >= 2) {
     endGame(roomId, io, 'double_pass');
   } else {
+    saveRoomState(room);
     const nextPlayer = room.players[game.turn];
     if (nextPlayer && nextPlayer.isBot) {
       setTimeout(() => handleBotMove(roomId, io, game.turn), 1000);
@@ -482,7 +572,7 @@ const handleResign = (socket, io) => {
 
   const playerIndex = room.players.findIndex(p => p.id === socket.id);
   const winnerIndex = playerIndex === 0 ? 1 : 0;
-  
+
   endGame(roomId, io, 'resign', winnerIndex);
 };
 
@@ -515,7 +605,7 @@ const handleDisconnect = (socket, io) => {
     const player = room.players.find(p => p.id === socket.id);
     if (player) {
       player.id = null; // Mark as disconnected
-      
+
       io.to(roomId).emit('opponent_disconnected', {
         nickname: player.nickname,
         timeout: 60
@@ -608,7 +698,7 @@ const endGame = (roomId, io, reason, winnerIndex = null) => {
         if (e.code !== 'P2025') console.error('DB update err', e);
       });
     }
-  } catch(e) { console.error('DB update err', e); }
+  } catch (e) { console.error('DB update err', e); }
 
   // BOT LEARNING
   const botIndex = room.players.findIndex(p => p.isBot);
@@ -616,11 +706,15 @@ const endGame = (roomId, io, reason, winnerIndex = null) => {
     const { updatePatternsFromGame } = require('./botAI');
     updatePatternsFromGame(room.game.history, winner, botIndex);
   }
-  
+
   if (activeTimeouts[roomId]) {
     clearTimeout(activeTimeouts[roomId]);
     delete activeTimeouts[roomId];
   }
+
+  // Remove persisted game state — game is over
+  const prisma = require('./prisma/db');
+  prisma.activeGame.delete({ where: { id: roomId } }).catch(() => {});
 };
 
 const handleUndoMove = async (socket, io) => {
@@ -693,6 +787,7 @@ const handleUndoMove = async (socket, io) => {
     turn: room.game.turn,
   });
 
+  saveRoomState(room);
   socket.emit('bonuses_updated', { bonuses: player.bonuses });
 };
 
@@ -712,5 +807,6 @@ module.exports = {
   createBotRoom,
   findMatch,
   cancelMatch,
-  checkActiveGame
+  checkActiveGame,
+  restoreRoomsFromDB,
 };

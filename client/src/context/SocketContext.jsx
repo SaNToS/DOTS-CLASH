@@ -8,11 +8,15 @@ const HOST = import.meta.env.VITE_SERVER_URL || window.location.origin;
 export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
   useEffect(() => {
     socketRef.current = io(HOST, {
-      reconnectionAttempts: 5,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
+      randomizationFactor: 0.5,
       autoConnect: true,
     });
 
@@ -21,11 +25,16 @@ export const SocketProvider = ({ children }) => {
     socket.on('connect', () => {
       console.log('Socket connected:', socket.id);
       setIsConnected(true);
+      setIsReconnecting(false);
     });
 
     socket.on('disconnect', () => {
       console.log('Socket disconnected');
       setIsConnected(false);
+    });
+
+    socket.on('reconnect_attempt', () => {
+      setIsReconnecting(true);
     });
 
     return () => {
@@ -34,7 +43,7 @@ export const SocketProvider = ({ children }) => {
   }, []);
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, isConnected }}>
+    <SocketContext.Provider value={{ socket: socketRef.current, isConnected, isReconnecting }}>
       {children}
     </SocketContext.Provider>
   );

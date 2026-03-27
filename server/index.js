@@ -11,10 +11,14 @@ const paymentRoutes = require('./routes/payment');
 
 const app = express();
 
-// CORS — allow only our frontend
+// CORS — allow frontend origins
 const ALLOWED_ORIGINS = [
   process.env.CLIENT_URL || 'https://dotsclash.xyz',
   'http://localhost:5173',
+  'http://localhost:80',
+  'http://localhost',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1',
 ];
 app.use(cors({
   origin: (origin, cb) => {
@@ -130,6 +134,8 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT} (accessible from network)`);
+roomManager.restoreRoomsFromDB().then(() => {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT} (accessible from network)`);
+  });
 });

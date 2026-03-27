@@ -9,6 +9,11 @@ export const useGame = (socket, roomId, myNickname) => {
   const [opponentDisconnected, setOpponentDisconnected] = useState(null);
   const [lastCaptureAt, setLastCaptureAt] = useState(0);
   const [diceRoll, setDiceRoll] = useState(null);
+  
+  // Capture animation states
+  const [captureAnimations, setCaptureAnimations] = useState([]);
+  const [persistedContours, setPersistedContours] = useState([]);
+  const [lastCaptureCoinInfo, setLastCaptureCoinInfo] = useState(null);
   const [playerTimes, setPlayerTimes] = useState([0, 0]);
   const turnStartRef = useRef(null);
 
@@ -29,7 +34,7 @@ export const useGame = (socket, roomId, myNickname) => {
     fetch('/api/auth/bonuses', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.bonuses !== undefined) setBonuses(d.bonuses); })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -59,6 +64,9 @@ export const useGame = (socket, roomId, myNickname) => {
       setDrawDeclined(false);
       setDrawCooldown(0);
       setUndoDenied(null);
+      setCaptureAnimations([]);
+      setPersistedContours([]);
+      setLastCaptureCoinInfo(null);
 
       // Set initial bonus count from player data
       if (gameData.players) {
@@ -113,6 +121,22 @@ export const useGame = (socket, roomId, myNickname) => {
         return { ...prev, board: newBoard, score: data.score };
       });
       setLastCaptureAt({ time: Date.now(), playerIndex: data.playerIndex });
+
+      // Add contour animations
+      if (data.contourPaths && data.contourPaths.length > 0) {
+        const newAnims = data.contourPaths.map((contour, i) => ({
+          id: Date.now() + i,
+          contour,
+          playerIndex: data.playerIndex,
+          startTime: Date.now(),
+        }));
+        setCaptureAnimations(prev => [...prev, ...newAnims]);
+      }
+
+      // Coin info for >= 3 captures
+      if (data.capturedCount >= 3) {
+        setLastCaptureCoinInfo({ playerIndex: data.playerIndex, capturedCount: data.capturedCount, time: Date.now() });
+      }
     });
 
     socket.on('turn_passed', (data) => {
@@ -138,6 +162,18 @@ export const useGame = (socket, roomId, myNickname) => {
         turn: data.turn,
         lastMove: null,
       } : prev);
+      // Clear active animations
+      setCaptureAnimations([]);
+      // Keep only contours whose boundary dots still exist on the board
+      setPersistedContours(prev => prev.filter(pc => {
+        if (!pc.contour || pc.contour.length === 0) return false;
+        const playerDot = pc.playerIndex + 1; // 1 or 2
+        return pc.contour.every(dot => 
+          dot.y >= 0 && dot.y < data.board.length &&
+          dot.x >= 0 && dot.x < data.board[0].length &&
+          data.board[dot.y][dot.x] === playerDot
+        );
+      }));
     });
 
     socket.on('bonuses_updated', (data) => {
@@ -261,14 +297,25 @@ export const useGame = (socket, roomId, myNickname) => {
     if (socket) socket.emit('undo_move');
   }, [socket]);
 
+  const finishAnimation = useCallback((animId) => {
+    setCaptureAnimations(prev => {
+      const anim = prev.find(a => a.id === animId);
+      if (anim) {
+        setPersistedContours(p => [...p, { contour: anim.contour, playerIndex: anim.playerIndex }]);
+      }
+      return prev.filter(a => a.id !== animId);
+    });
+  }, []);
+
   return {
     room, gameState, error, chat, gameOverResult,
     opponentDisconnected, lastCaptureAt, diceRoll,
     playerTimes, turnStartRef,
     drawOffered, drawOfferSent, drawDeclined, drawCooldown,
     bonuses, undoDenied,
+    captureAnimations, persistedContours, lastCaptureCoinInfo,
     makeMove, passTurn, resign, sendMessage,
     offerDraw, acceptDraw, declineDraw,
-    undoMove,
+    undoMove, finishAnimation,
   };
 };

@@ -266,98 +266,109 @@ export default function Landing() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap');
       `}</style>
+
       {/* ── Animated game board background (fixed, full-screen) ── */}
       <div
         className="fixed inset-0 z-0 overflow-hidden transition-opacity duration-700"
         style={{ opacity: fadeOut ? 0 : 1 }}
       >
-        <div className="scale-[1.15] opacity-80 min-h-screen min-w-[100vw] flex items-center justify-center">
+        <div className="scale-[1.15] opacity-75 min-h-screen min-w-[100vw] flex items-center justify-center">
           <BoardSVG board={board} flashCells={flashCells} />
         </div>
-        {/* Stronger blur + Dark overlay for dramatic focus */}
-        <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[6px]" />
-        {/* Deep radial vignette — pushes focus to center */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_75%_at_50%_50%,transparent_15%,rgba(15,23,42,0.95)_100%)]" />
+        <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-[7px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_70%_at_50%_50%,transparent_20%,rgba(15,23,42,0.97)_100%)]" />
       </div>
 
-      {/* ── HERO ─────────────────────────────────────────────────── */}
-      <div className="relative z-10 min-h-[100dvh] flex flex-col items-center justify-center px-4">
+      {/* ── HERO ── */}
+      <div className="relative z-10 min-h-[100dvh] flex flex-col items-center justify-center px-4 py-20 sm:py-24">
 
-        {/* Live score — top corners */}
-        <div className="absolute top-5 left-5 flex items-center gap-2.5">
-          <div className="w-3 h-3 rounded-full bg-blue-400 shadow-[0_0_10px_#60a5fa]" />
-          <span className="text-blue-400 font-black text-2xl tabular-nums drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]">
-            {score[0]}
-          </span>
-        </div>
-        <div className="absolute top-5 right-5 flex items-center gap-2.5">
-          <span className="text-red-400 font-black text-2xl tabular-nums drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]">
-            {score[1]}
-          </span>
-          <div className="w-3 h-3 rounded-full bg-red-400 shadow-[0_0_10px_#f87171]" />
-        </div>
+        {/* Live game score bar — centered, works on all screen sizes */}
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.5 }}
+          className="flex items-center gap-3 sm:gap-5 px-4 sm:px-6 py-2.5 rounded-full bg-slate-900/70 border border-white/10 backdrop-blur-md mb-6 sm:mb-8 shadow-xl"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_8px_#60a5fa]" />
+            <span className="text-blue-400 font-black text-xl tabular-nums drop-shadow-[0_0_6px_rgba(96,165,250,0.8)]">
+              {score[0]}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-white/5">
+            <div className={`w-1.5 h-1.5 rounded-full animate-pulse transition-colors duration-300 ${
+              turn === 0 ? 'bg-blue-400 shadow-[0_0_4px_#60a5fa]' : 'bg-red-400 shadow-[0_0_4px_#f87171]'
+            }`} />
+            <span className="text-slate-300 text-xs font-semibold">
+              {turn === 0 ? 'Blue' : 'Red'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-red-400 font-black text-xl tabular-nums drop-shadow-[0_0_6px_rgba(248,113,113,0.8)]">
+              {score[1]}
+            </span>
+            <div className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-[0_0_8px_#f87171]" />
+          </div>
+        </motion.div>
 
-        {/* Turn indicator */}
-        <div className="absolute top-5 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/60 border border-white/10 backdrop-blur-sm">
-          <div
-            className={`w-2 h-2 rounded-full animate-pulse transition-colors duration-300 ${turn === 0 ? 'bg-blue-400 shadow-[0_0_6px_#60a5fa]' : 'bg-red-400 shadow-[0_0_6px_#f87171]'
-              }`}
-          />
-          <span className="text-slate-300 text-xs font-semibold">
-            {turn === 0 ? 'Blue' : 'Red'}&apos;s turn
-          </span>
-        </div>
-
-        {/* Main hero card */}
+        {/* Main hero content */}
         <motion.div
           initial="hidden"
           animate="visible"
-          variants={{ visible: { transition: { staggerChildren: 0.15, delayChildren: 0.1 } } }}
-          className="text-center max-w-4xl w-full mt-10"
+          variants={{ visible: { transition: { staggerChildren: 0.13, delayChildren: 0.05 } } }}
+          className="text-center max-w-4xl w-full"
         >
-          <motion.div variants={item} className="mb-6 inline-flex items-center gap-3 px-6 py-2.5 rounded-full border border-blue-400/50 bg-blue-500/15 text-blue-300 text-sm font-bold tracking-wide backdrop-blur-md shadow-[0_0_20px_rgba(59,130,246,0.3)]">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse shadow-[0_0_8px_#60a5fa]" />
+          {/* Tag badge */}
+          <motion.div variants={item} className="mb-5 sm:mb-6 inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-blue-400/40 bg-blue-500/10 text-blue-300 text-xs sm:text-sm font-bold tracking-wider backdrop-blur-md shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+            <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-[0_0_8px_#60a5fa]" />
             {t('landing.tag')}
           </motion.div>
 
+          {/* Hero card */}
           <motion.div
             variants={item}
-            className="bg-slate-900/40 border border-white/10 rounded-[2.5rem] backdrop-blur-[24px] p-8 md:p-14 shadow-[0_0_120px_-20px_rgba(139,92,246,0.4)] mb-10 overflow-hidden relative"
+            className="relative bg-slate-900/45 border border-white/[0.08] rounded-[2rem] sm:rounded-[2.5rem] backdrop-blur-[22px] p-6 sm:p-10 md:p-14 shadow-[0_0_120px_-25px_rgba(139,92,246,0.45),0_0_50px_-15px_rgba(59,130,246,0.2)] mb-6 sm:mb-10 overflow-hidden"
           >
-            {/* Inner glow effect */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50 blur-sm" />
+            {/* Top border glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-blue-500/60 to-transparent" />
+            {/* Corner accents */}
+            <div className="absolute top-3 left-3 w-7 h-7 border-t-2 border-l-2 border-blue-500/30 rounded-tl-xl pointer-events-none" />
+            <div className="absolute top-3 right-3 w-7 h-7 border-t-2 border-r-2 border-purple-500/30 rounded-tr-xl pointer-events-none" />
+            <div className="absolute bottom-3 left-3 w-7 h-7 border-b-2 border-l-2 border-indigo-500/20 rounded-bl-xl pointer-events-none" />
+            <div className="absolute bottom-3 right-3 w-7 h-7 border-b-2 border-r-2 border-indigo-500/20 rounded-br-xl pointer-events-none" />
 
-            <h1 
-              className="text-6xl md:text-[5.5rem] mb-6 tracking-tighter leading-[1.0] text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 drop-shadow-xl whitespace-pre-line text-center"
+            <h1
+              className="text-[2.5rem] leading-[1.05] sm:text-5xl md:text-7xl lg:text-[5.5rem] mb-4 sm:mb-6 tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 whitespace-pre-line text-center"
               style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, textTransform: 'uppercase' }}
             >
-              ПЕРЕХИТРИ<br/>СВОГО СУПЕРНИКА
+              {t('landing.headline')}
             </h1>
-            <p className="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed mb-12 font-medium">
+
+            <p className="text-sm sm:text-lg md:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed mb-7 sm:mb-12 font-medium px-1">
               {t('landing.subtitle')}
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-5 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-5 justify-center">
               <button
                 onClick={() => navigate('/lobby')}
-                className="group relative flex items-center justify-center gap-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-10 py-5 rounded-2xl font-black text-xl hover:scale-[1.03] active:scale-95 transition-all shadow-[0_0_40px_-5px_rgba(99,102,241,0.6)]"
+                className="group relative flex items-center justify-center gap-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl font-black text-base sm:text-xl hover:scale-[1.03] active:scale-95 transition-all shadow-[0_0_40px_-5px_rgba(99,102,241,0.65)] overflow-hidden"
               >
-                <div className="absolute inset-0 rounded-2xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <Play className="w-6 h-6 fill-current group-hover:translate-x-1 transition-transform" />
-                {t('landing.play')}
+                <div className="absolute inset-0 rounded-2xl bg-white/15 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-current flex-shrink-0 group-hover:translate-x-0.5 transition-transform relative" />
+                <span className="relative">{t('landing.play')}</span>
               </button>
               <button
                 onClick={() => navigate('/leaderboard')}
-                className="group flex items-center justify-center gap-3 bg-slate-800/80 hover:bg-slate-700/90 border border-slate-500/40 text-white px-10 py-5 rounded-2xl font-bold text-xl hover:scale-[1.03] active:scale-95 transition-all backdrop-blur-md shadow-lg"
+                className="group flex items-center justify-center gap-2.5 bg-slate-800/80 hover:bg-slate-700/90 border border-slate-500/40 hover:border-slate-400/50 text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl font-bold text-base sm:text-xl hover:scale-[1.03] active:scale-95 transition-all backdrop-blur-md"
               >
-                <Trophy className="w-6 h-6 text-yellow-400 group-hover:scale-110 transition-transform" />
-                {t('landing.rankings')}
+                <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400 group-hover:scale-110 transition-transform flex-shrink-0" />
+                <span>{t('landing.rankings')}</span>
               </button>
             </div>
           </motion.div>
 
-          {/* Mini stat pills */}
-          <motion.div variants={item} className="flex justify-center gap-3 flex-wrap">
+          {/* Stat pills */}
+          <motion.div variants={item} className="flex justify-center gap-2 sm:gap-3 flex-wrap">
             {[
               { label: 'Real-time PvP', color: 'blue' },
               { label: 'ELO Ranking', color: 'yellow' },
@@ -383,44 +394,43 @@ export default function Landing() {
         <motion.div
           animate={{ y: [0, 8, 0] }}
           transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 opacity-40"
+          className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 opacity-35"
         >
-          <div className="w-px h-10 bg-gradient-to-b from-transparent to-slate-400" />
+          <div className="w-px h-8 sm:h-10 bg-gradient-to-b from-transparent to-slate-400" />
           <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
         </motion.div>
       </div>
 
-      {/* ── FEATURES — solid bg so board doesn't show through ────── */}
+      {/* ── FEATURES — solid bg so board doesn't show through ── */}
       <div className="relative z-10">
-        {/* Gradient transition */}
-        <div className="h-28 bg-gradient-to-b from-transparent to-[#0f172a]" />
+        <div className="h-16 sm:h-28 bg-gradient-to-b from-transparent to-[#0f172a]" />
 
-        <div className="bg-[#0f172a] pb-28 px-6">
+        <div className="bg-[#0f172a] pb-20 sm:pb-28 px-4 sm:px-6">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-60px' }}
-            transition={{ duration: 0.6, staggerChildren: 0.15 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto"
+            transition={{ duration: 0.6 }}
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto"
           >
-            <div className="bg-gradient-to-b from-slate-800/80 to-slate-900/80 p-8 rounded-3xl border border-slate-700/50 backdrop-blur-xl relative overflow-hidden group hover:border-blue-500/50 transition-colors">
+            <div className="bg-gradient-to-b from-slate-800/80 to-slate-900/80 p-6 sm:p-8 rounded-3xl border border-slate-700/50 backdrop-blur-xl relative overflow-hidden group hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
               <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <Zap className="w-10 h-10 text-blue-400 mb-5" />
-              <h3 className="text-xl font-bold text-white mb-3">{t('landing.feat1.title')}</h3>
+              <Zap className="w-9 h-9 sm:w-10 sm:h-10 text-blue-400 mb-4 sm:mb-5" />
+              <h3 className="text-base sm:text-xl font-bold text-white mb-2 sm:mb-3">{t('landing.feat1.title')}</h3>
               <p className="text-slate-400 text-sm leading-relaxed">{t('landing.feat1.desc')}</p>
             </div>
 
-            <div className="bg-gradient-to-b from-slate-800/80 to-slate-900/80 p-8 rounded-3xl border border-slate-700/50 backdrop-blur-xl relative overflow-hidden group hover:border-purple-500/50 transition-colors">
+            <div className="bg-gradient-to-b from-slate-800/80 to-slate-900/80 p-6 sm:p-8 rounded-3xl border border-slate-700/50 backdrop-blur-xl relative overflow-hidden group hover:border-purple-500/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
               <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-purple-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <Shield className="w-10 h-10 text-purple-400 mb-5" />
-              <h3 className="text-xl font-bold text-white mb-3">{t('landing.feat2.title')}</h3>
+              <Shield className="w-9 h-9 sm:w-10 sm:h-10 text-purple-400 mb-4 sm:mb-5" />
+              <h3 className="text-base sm:text-xl font-bold text-white mb-2 sm:mb-3">{t('landing.feat2.title')}</h3>
               <p className="text-slate-400 text-sm leading-relaxed">{t('landing.feat2.desc')}</p>
             </div>
 
-            <div className="bg-gradient-to-b from-slate-800/80 to-slate-900/80 p-8 rounded-3xl border border-slate-700/50 backdrop-blur-xl relative overflow-hidden group hover:border-emerald-500/50 transition-colors">
+            <div className="bg-gradient-to-b from-slate-800/80 to-slate-900/80 p-6 sm:p-8 rounded-3xl border border-slate-700/50 backdrop-blur-xl relative overflow-hidden group hover:border-emerald-500/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
               <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <Users className="w-10 h-10 text-emerald-400 mb-5" />
-              <h3 className="text-xl font-bold text-white mb-3">{t('landing.feat3.title')}</h3>
+              <Users className="w-9 h-9 sm:w-10 sm:h-10 text-emerald-400 mb-4 sm:mb-5" />
+              <h3 className="text-base sm:text-xl font-bold text-white mb-2 sm:mb-3">{t('landing.feat3.title')}</h3>
               <p className="text-slate-400 text-sm leading-relaxed">{t('landing.feat3.desc')}</p>
             </div>
           </motion.div>

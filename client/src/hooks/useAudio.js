@@ -59,7 +59,17 @@ export function useAudio() {
         }).toDestination();
         noiseSynth.volume.value = -12;
 
-        synthsRef.current = { padSynth, popSynth, goodSynth, badSynth, fanfareSynth, noiseSynth };
+        // Coin collect synth — bright metallic ping
+        const coinSynth = new Tone.MetalSynth({
+          frequency: 300,
+          envelope: { attack: 0.001, decay: 0.4, release: 0.3 },
+          harmonicity: 5.1,
+          modulationIndex: 16,
+          octaves: 1.5,
+        }).toDestination();
+        coinSynth.volume.value = -8;
+
+        synthsRef.current = { padSynth, popSynth, goodSynth, badSynth, fanfareSynth, noiseSynth, coinSynth };
 
         bgMusicPattern.current = new Tone.Pattern((time, note) => {
           if (synthsRef.current) synthsRef.current.padSynth.triggerAttackRelease(note, '1m', time, 0.2);
@@ -160,9 +170,21 @@ export function useAudio() {
     setIsMusicPlaying(!isMusicPlaying);
   };
 
+  // Coin collect sound: bright ascending ping
+  const playCoinSound = useCallback(() => {
+    if (isMuted || !synthsRef.current || !ToneRef.current) return;
+    try {
+      const Tone = ToneRef.current;
+      const { coinSynth } = synthsRef.current;
+      const now = Tone.now();
+      coinSynth.triggerAttackRelease('16n', now, 0.8);
+      coinSynth.triggerAttackRelease('16n', now + 0.15, 0.5);
+    } catch (e) {}
+  }, [isMuted]);
+
   return {
     playPopSound, playCaptureSound, playVictoryFanfare,
-    playDiceRollSound, playDiceRevealSound,
+    playDiceRollSound, playDiceRevealSound, playCoinSound,
     isMuted, toggleMute, isMusicPlaying, toggleMusic
   };
 }

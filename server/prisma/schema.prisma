@@ -37,3 +37,9 @@ model GameRecord {
   endedAt     DateTime @default(now())
   boardState  Json?    // final board matrix
 }
+
+model ActiveGame {
+  id        String   @id
+  state     Json
+  updatedAt DateTime @updatedAt
+}

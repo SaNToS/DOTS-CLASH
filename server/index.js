@@ -45,16 +45,17 @@ setInterval(() => {
   for (const [k, v] of authAttempts) if (v.start < cutoff) authAttempts.delete(k);
 }, 5 * 60 * 1000);
 
-// Stripe webhook needs raw body — mount BEFORE express.json()
-app.use('/api/payment', paymentRoutes);
-
 app.use(express.json());
 
-app.use('/api/auth/login', rateLimit(10, 60_000));    // 10 req/min
-app.use('/api/auth/register', rateLimit(5, 60_000));  // 5 req/min
+// Routes
+app.use('/api/auth/login', rateLimit(10, 60_000));
+app.use('/api/auth/register', rateLimit(5, 60_000));
 app.use('/api/auth', authRoutes);
-app.use('/api', authRoutes); // for leaderboard
 app.use('/api/admin', adminRoutes);
+
+// For backward compatibility (leaderboard etc)
+app.use('/api/payment', paymentRoutes);
+app.use('/api', authRoutes);
 
 const server = http.createServer(app);
 const io = new Server(server, {

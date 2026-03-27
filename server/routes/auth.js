@@ -67,14 +67,31 @@ router.get('/leaderboard', async (req, res) => {
 // GET own bonus count (requires auth token in header)
 router.get('/bonuses', async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    const jwt = require('jsonwebtoken');
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      console.log('[Auth] No authorization header for /bonuses');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+      console.log('[Auth] No token in authorization header');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const payload = jwt.verify(token, JWT_SECRET);
-    const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { bonuses: true } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const user = await prisma.user.findUnique({ 
+      where: { id: payload.userId }, 
+      select: { id: true, username: true, bonuses: true } 
+    });
+
+    if (!user) {
+      console.log(`[Auth] User not found for ID: ${payload.userId}`);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     res.json({ bonuses: user.bonuses });
   } catch (err) {
+    console.error('[Auth] Bonus fetch error:', err.message);
     res.status(401).json({ error: 'Invalid token' });
   }
 });

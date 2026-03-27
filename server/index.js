@@ -55,6 +55,28 @@ app.use('/api/admin', adminRoutes);
 
 // For backward compatibility (leaderboard etc)
 app.use('/api/payment', paymentRoutes);
+app.get('/api/test', (req, res) => res.json({ ok: true, msg: 'Root index test' }));
+
+// ── GET /api/auth/bonuses (directly in index.js for robustness) ──────
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'supersecret_dots_key';
+const prisma = require('./prisma/db');
+app.get('/api/auth/bonuses', async (req, res) => {
+  console.log('[DEBUG] GET /api/auth/bonuses hit');
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'Unauthorized' });
+    const token = authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    const payload = jwt.verify(token, JWT_SECRET);
+    const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { bonuses: true } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ bonuses: user.bonuses });
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
 app.use('/api', authRoutes);
 
 const server = http.createServer(app);
